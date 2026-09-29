@@ -30,7 +30,11 @@ synth (e.g. FM-1)  ──USB─┘
 
 ## Hubs and charging
 
-The tablet needs a **USB hub** between it and the two devices — but it can be tiny. A 1-to-3 USB "Y" hub cable works: it looks like a splitter cable but has a hub chip inside. (A plain *power-only* Y splitter would not: two devices can't share one cable's data wires without a hub.) On a USB-C tablet, a USB-C-to-USB-A OTG adapter connects a USB-A hub cable like this one.
+The tablet needs a **USB hub** between it and the two devices — but it can be tiny. A 1-to-3 USB "Y" hub cable works: it looks like a splitter cable but has a hub chip inside. This is the one used here (a USB 2.0, USB-A 1-in/3-out "Y extension hub cable", about $6):
+
+<img src="docs/usb-y-hub-cable.png" alt="A braided 1-to-3 USB-A Y hub cable: one USB-A plug splitting into three USB-A sockets" width="360">
+
+ (A plain *power-only* Y splitter would not: two devices can't share one cable's data wires without a hub.) On a USB-C tablet, a USB-C-to-USB-A OTG adapter connects a USB-A hub cable like this one.
 
 **Charging while playing depends on the tablet.** Some tablets charge and run USB devices at the same time through a hub with a PD charging input; others stop charging while they're powering USB devices, or won't do both at once at all. Try it with your tablet; if it won't charge, it still runs on battery, powering the keyboard and the FM-1 from the tablet.
 
