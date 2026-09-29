@@ -30,7 +30,7 @@ synth (e.g. FM-1)  ──USB─┘
 
 ## Hubs and charging
 
-The tablet needs a **USB hub** between it and the two devices — but it can be tiny. A 1-to-3 USB "Y" hub cable works: it looks like a splitter cable but has a hub chip inside. This is the one used here (a USB 2.0, USB-A 1-in/3-out "Y extension hub cable", about $6):
+The tablet needs a **USB hub** between it and the two devices — but it can be tiny. A 1-to-3 USB "Y" hub cable works: it looks like a splitter cable but has a hub chip inside. This is the one used here — a USB 2.0, USB-A 1-in/3-out "Y extension hub cable", about $6 ([Amazon](https://www.amazon.com/dp/B0GH45DKS7)):
 
 <img src="docs/usb-y-hub-cable.png" alt="A braided 1-to-3 USB-A Y hub cable: one USB-A plug splitting into three USB-A sockets" width="360">
 
