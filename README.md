@@ -10,6 +10,10 @@ USB MIDI interface ──USB─┘
         └── DIN / TRS MIDI OUT ──> synth
 ```
 
+<img src="docs/screenshot.png" alt="MIDI Bridge switched ON: FROM and TO device pickers, a green ON button, All notes off, and a status card" width="320">
+
+*(Emulator screenshot, so the device pickers are empty — on a tablet they show the keyboard and interface, and the status card shows the note being played with its frequency.)*
+
 Built for an M-Audio Keystation 49 MK3 (USB only) playing an M-VAVE FM-1 through an Arturia interface's MIDI OUT, but it works with any class-compliant USB MIDI devices Android can see.
 
 ## Download

@@ -4,4 +4,4 @@ app/build/
 local.properties
 .DS_Store
 *.apk
-screenshot.png
+/screenshot.png
