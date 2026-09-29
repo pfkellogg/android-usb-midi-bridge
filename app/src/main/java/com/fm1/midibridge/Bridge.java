@@ -50,7 +50,8 @@ public final class Bridge {
     }
 
     private static final String[] FROM_HINTS = {"keystation", "m-audio"};
-    private static final String[] TO_HINTS = {"arturia", "minifuse", "audiofuse"};
+    // MIDI interfaces first, then the FM-1 itself on USB (it names itself "USB Composite Device").
+    private static final String[] TO_HINTS = {"arturia", "minifuse", "audiofuse", "fm-1", "fm1", "m-vave", "cuvave", "composite"};
     private static final String[] NOTE_NAMES = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
 
     private static Bridge instance;

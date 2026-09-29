@@ -16,6 +16,18 @@ USB MIDI interface ──USB─┘
 
 Built for an M-Audio Keystation 49 MK3 (USB only) playing an M-VAVE FM-1 through an Arturia interface's MIDI OUT, but it works with any class-compliant USB MIDI devices Android can see.
 
+### Bare-bones setup: synth on USB, no MIDI interface
+
+If the synth has its own USB MIDI port (the FM-1 does), skip the interface and plug the synth into the tablet directly:
+
+```
+USB MIDI keyboard ──USB──┐
+                         ├── small USB-C OTG hub (with PD charging input) ── Android tablet
+synth (e.g. FM-1)  ──USB─┘
+```
+
+**TO** picks the FM-1 automatically (it shows up as "USB Composite Device"). A plain USB **Y splitter cable won't work** here: USB only lets one device talk on a cable's data wires, so two devices need a hub — the smallest ones are cable-sized and look like a Y cable, but have a hub chip inside. One with a charging input also powers the keyboard and the FM-1 while charging the tablet.
+
 ## Download
 
 Get the APK from [**Releases**](../../releases/latest), open it on the tablet, and allow installing from that source when Android asks. (It's a debug-signed sideload build, not a Play Store app, so Play Protect may warn — choose *Install anyway*.)
