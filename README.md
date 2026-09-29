@@ -22,11 +22,17 @@ If the synth has its own USB MIDI port (the FM-1 does), skip the interface and p
 
 ```
 USB MIDI keyboard ──USB──┐
-                         ├── small USB-C OTG hub (with PD charging input) ── Android tablet
+                         ├── USB hub (a 1-to-3 "Y" hub cable is enough) ── Android tablet
 synth (e.g. FM-1)  ──USB─┘
 ```
 
-**TO** picks the FM-1 automatically (it shows up as "USB Composite Device"). A plain USB **Y splitter cable won't work** here: USB only lets one device talk on a cable's data wires, so two devices need a hub — the smallest ones are cable-sized and look like a Y cable, but have a hub chip inside. One with a charging input also powers the keyboard and the FM-1 while charging the tablet.
+**TO** picks the FM-1 automatically (it shows up as "USB Composite Device"). No MIDI cable goes to the FM-1 at all — the notes reach it over its USB cable.
+
+## Hubs and charging
+
+The tablet needs a **USB hub** between it and the two devices — but it can be tiny. A 1-to-3 USB "Y" hub cable works: it looks like a splitter cable but has a hub chip inside. (A plain *power-only* Y splitter would not: two devices can't share one cable's data wires without a hub.) On a USB-C tablet, a USB-C-to-USB-A OTG adapter connects a USB-A hub cable like this one.
+
+**Charging while playing depends on the tablet.** Some tablets charge and run USB devices at the same time through a hub with a PD charging input; others stop charging while they're powering USB devices, or won't do both at once at all. Try it with your tablet; if it won't charge, it still runs on battery, powering the keyboard and the FM-1 from the tablet.
 
 ## Download
 
