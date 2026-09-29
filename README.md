@@ -46,7 +46,7 @@ Plain Java, no AndroidX or other dependencies. Needs JDK 17+ and the Android SDK
 
 ## Status
 
-v1.3 (foreground-only) is confirmed working on an Android 16 tablet. v1.4 adds background running; it compiles but hasn't been tested on the tablet yet.
+v1.4 is confirmed working on an Android 16 tablet, including in the background (another app in front).
 
 ## License
 
