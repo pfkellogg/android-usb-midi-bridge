@@ -38,6 +38,8 @@ The tablet needs a **USB hub** between it and the two devices — but it can be 
 
 **Charging while playing depends on the tablet.** Some tablets charge and run USB devices at the same time through a hub with a PD charging input; others stop charging while they're powering USB devices, or won't do both at once at all. Try it with your tablet; if it won't charge, it still runs on battery, powering the keyboard and the FM-1 from the tablet.
 
+**Tip: use a powered hub for long sessions.** A bus-powered hub (like the Y cable above) makes the tablet's battery power the keyboard *and* the synth as well as itself. A hub with its own power adapter powers the keyboard and the FM-1 from the wall instead, so the tablet only runs itself and the app and its battery lasts far longer — even on tablets that can't charge while using USB. Don't try to wire a charger to the tablet's battery directly: that bypasses its charging circuit and is a fire risk.
+
 ## Download
 
 Get the APK from [**Releases**](../../releases/latest), open it on the tablet, and allow installing from that source when Android asks. (It's a debug-signed sideload build, not a Play Store app, so Play Protect may warn — choose *Install anyway*.)
