@@ -30,6 +30,19 @@
             </intent-filter>
         </activity>
 
+        <!-- "MIDI Bridge" virtual device: lets other apps play through the bridge. -->
+        <service
+            android:name=".BridgeMidiService"
+            android:exported="true"
+            android:permission="android.permission.BIND_MIDI_DEVICE_SERVICE">
+            <intent-filter>
+                <action android:name="android.media.midi.MidiDeviceService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.media.midi.MidiDeviceService"
+                android:resource="@xml/midi_bridge_device" />
+        </service>
+
         <service
             android:name=".BridgeService"
             android:exported="false"

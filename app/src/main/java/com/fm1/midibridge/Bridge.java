@@ -156,7 +156,10 @@ public final class Bridge {
         if (midi == null) return "This device has no MIDI support.";
         if (toPort != null && fromPort != null) return "Forwarding\n" + connectedFrom + "\n→ " + connectedTo;
         if (error != null) return error;
-        if (!on) return sources.isEmpty() ? "No MIDI devices found — check the hub." : "Stopped.";
+        if (sources.isEmpty() && dests.isEmpty()) return "No MIDI devices found — check the hub.";
+        if (to() == null) return "Only the keyboard is plugged in.\nThe tablet doesn't see the FM-1 — check its USB cable, "
+                + "that it's switched on, and the hub's power.";
+        if (!on) return "Stopped.";
         if (connecting) return "Connecting…";
         return "Waiting for both devices to be plugged in…";
     }
@@ -186,6 +189,22 @@ public final class Bridge {
 
     public void removeListener(Runnable r) {
         listeners.remove(r);
+    }
+
+    /**
+     * MIDI from another app (via BridgeMidiService), mixed into the stream to
+     * the TO device. Dropped while the bridge isn't connected.
+     */
+    public void sendFromApp(byte[] msg, int offset, int count) throws IOException {
+        MidiInputPort out = toPort;
+        if (out != null) out.send(msg, offset, count);
+    }
+
+    private boolean isOwnDevice(MidiDeviceInfo info) {
+        Bundle p = info.getProperties();
+        return info.getType() == MidiDeviceInfo.TYPE_VIRTUAL
+                && "MIDI Bridge".equals(p.getString(MidiDeviceInfo.PROPERTY_PRODUCT))
+                && "Android USB MIDI Bridge".equals(p.getString(MidiDeviceInfo.PROPERTY_MANUFACTURER));
     }
 
     /** Sustain off + all notes off on every channel, so nothing's left hanging. */
@@ -320,6 +339,7 @@ public final class Bridge {
         sources.clear();
         dests.clear();
         for (MidiDeviceInfo info : midi.getDevices()) {
+            if (isOwnDevice(info)) continue;   // our own "MIDI Bridge" input for other apps
             int outs = info.getOutputPortCount();
             for (int i = 0; i < outs; i++) {
                 sources.add(new PortRef(info, i, portLabel(info, MidiDeviceInfo.PortInfo.TYPE_OUTPUT, i, outs)));
@@ -331,10 +351,12 @@ public final class Bridge {
         }
     }
 
-    /** The saved choice if it's plugged in, else the first port whose name matches a hint (not on `avoid`'s device). */
+    /** The saved choice if it's plugged in (and not on `avoid`'s device), else the first port whose name matches a hint, else any other device. */
     private static PortRef pick(List<PortRef> list, String saved, String[] hints, PortRef avoid) {
         if (saved != null) {
-            for (PortRef r : list) if (r.label.equals(saved)) return r;
+            // Never reuse a saved TO that's on the FROM device (e.g. the keyboard's own input port).
+            for (PortRef r : list)
+                if (r.label.equals(saved) && (avoid == null || r.info.getId() != avoid.info.getId())) return r;
         }
         for (String h : hints) {
             for (PortRef r : list) {

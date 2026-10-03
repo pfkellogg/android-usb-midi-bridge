@@ -16,12 +16,11 @@ import android.os.PowerManager;
 import android.provider.Settings;
 import android.view.Gravity;
 import android.view.View;
-import android.widget.AdapterView;
+import android.app.AlertDialog;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
-import android.widget.Spinner;
 import android.widget.TextView;
 
 import java.util.List;
@@ -36,10 +35,9 @@ public class MainActivity extends Activity {
     private final Handler ui = new Handler(Looper.getMainLooper());
     private Bridge bridge;
 
-    private Spinner fromSpin, toSpin;
+    private Button fromBtn, toBtn;
     private Button toggle;
     private TextView status, lastMsg, bigNote;
-    private boolean refreshingLists = false;
     private final Runnable onChange = this::refresh;
 
     @Override
@@ -87,19 +85,43 @@ public class MainActivity extends Activity {
     }
 
     private void refresh() {
-        List<Bridge.PortRef> sources = bridge.sources();
-        List<Bridge.PortRef> dests = bridge.dests();
-        refreshingLists = true;
-        fromSpin.setAdapter(portAdapter(sources));
-        toSpin.setAdapter(portAdapter(dests));
         Bridge.PortRef from = bridge.from();
         Bridge.PortRef to = bridge.to();
-        if (from != null) fromSpin.setSelection(sources.indexOf(from), false);
-        if (to != null) toSpin.setSelection(dests.indexOf(to), false);
-        // Spinner delivers its selection callback on a later layout pass; ignore that one.
-        ui.post(() -> refreshingLists = false);
+        fromBtn.setText((from != null ? from.label : "(no keyboard found)") + "   ▾");
+        toBtn.setText((to != null ? to.label : "(nothing found — tap to see devices)") + "   ▾");
         status.setText(bridge.status());
         updateToggle();
+    }
+
+    /** Big-text device list in a dialog — works at any font size, unlike a Spinner. */
+    private void pickPort(boolean isFrom) {
+        List<Bridge.PortRef> items = isFrom ? bridge.sources() : bridge.dests();
+        String title = isFrom ? "FROM — the keyboard you play" : "TO — the FM-1 (or MIDI interface)";
+        if (items.isEmpty()) {
+            new AlertDialog.Builder(this).setTitle(title)
+                    .setMessage("No MIDI devices found. Check the hub and cables.")
+                    .setPositiveButton("OK", null).show();
+            return;
+        }
+        ArrayAdapter<Bridge.PortRef> ad = new ArrayAdapter<Bridge.PortRef>(this, android.R.layout.simple_list_item_1, items) {
+            @Override
+            public View getView(int position, View convertView, android.view.ViewGroup parent) {
+                TextView t = (TextView) super.getView(position, convertView, parent);
+                t.setTextSize(20);
+                t.setSingleLine(false);
+                t.setTextColor(TEXT);
+                t.setPadding(dp(20), dp(16), dp(20), dp(16));
+                return t;
+            }
+        };
+        new AlertDialog.Builder(this).setTitle(title)
+                .setAdapter(ad, (d, which) -> {
+                    Bridge.PortRef picked = items.get(which);
+                    if (isFrom) bridge.choose(picked, bridge.to());
+                    else bridge.choose(bridge.from(), picked);
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     // Palette: white on black, high contrast. Every color is set explicitly so
@@ -137,23 +159,23 @@ public class MainActivity extends Activity {
         TextView title = text("MIDI Bridge", 30, TEXT);
         title.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
         root.addView(title);
-        TextView subtitle = text("Keyboard → MIDI interface → FM-1      v" + versionName(), 16, MUTED);
+        TextView subtitle = text("Keyboard → FM-1      v" + versionName(), 16, MUTED);
         subtitle.setPadding(0, dp(4), 0, dp(20));
         root.addView(subtitle);
 
         LinearLayout devices = card();
         devices.addView(label("FROM  ·  keyboard"));
-        fromSpin = new Spinner(this);
-        devices.addView(fromSpin);
+        fromBtn = pickerButton(v -> pickPort(true));
+        devices.addView(fromBtn);
         View divider = new View(this);
         divider.setBackgroundColor(BORDER);
         LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1));
         dlp.topMargin = dp(12);
         divider.setLayoutParams(dlp);
         devices.addView(divider);
-        devices.addView(label("TO  ·  MIDI interface → FM-1"));
-        toSpin = new Spinner(this);
-        devices.addView(toSpin);
+        devices.addView(label("TO  ·  FM-1 (USB) or MIDI interface"));
+        toBtn = pickerButton(v -> pickPort(false));
+        devices.addView(toBtn);
         root.addView(devices);
 
         toggle = new Button(this);
@@ -210,47 +232,26 @@ public class MainActivity extends Activity {
         info.addView(lastMsg);
         root.addView(info);
 
-        AdapterView.OnItemSelectedListener onPick = new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if (refreshingLists) return;
-                bridge.choose((Bridge.PortRef) fromSpin.getSelectedItem(), (Bridge.PortRef) toSpin.getSelectedItem());
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-            }
-        };
-        for (Spinner sp : new Spinner[]{fromSpin, toSpin}) {
-            sp.setPopupBackgroundDrawable(rounded(Color.rgb(24, 24, 24), BORDER, 12));
-            sp.getBackground().setTint(TEXT);  // white dropdown arrow
-        }
-        fromSpin.setOnItemSelectedListener(onPick);
-        toSpin.setOnItemSelectedListener(onPick);
-
         setContentView(scroll);
     }
 
-    /** Spinner rows in the app's type: 18sp white, roomy. */
-    private ArrayAdapter<Bridge.PortRef> portAdapter(List<Bridge.PortRef> items) {
-        return new ArrayAdapter<Bridge.PortRef>(this, android.R.layout.simple_spinner_dropdown_item, items) {
-            @Override
-            public View getView(int position, View convertView, android.view.ViewGroup parent) {
-                return style((TextView) super.getView(position, convertView, parent), 0);
-            }
-
-            @Override
-            public View getDropDownView(int position, View convertView, android.view.ViewGroup parent) {
-                return style((TextView) super.getDropDownView(position, convertView, parent), dp(16));
-            }
-
-            private TextView style(TextView t, int hPad) {
-                t.setTextSize(18);
-                t.setTextColor(TEXT);
-                t.setPadding(hPad, dp(12), hPad, dp(12));
-                return t;
-            }
-        };
+    /** A full-width button showing the chosen device; text wraps at any font size. */
+    private Button pickerButton(View.OnClickListener l) {
+        Button b = new Button(this);
+        b.setAllCaps(false);
+        b.setTextSize(19);
+        b.setTextColor(TEXT);
+        b.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        b.setSingleLine(false);
+        b.setStateListAnimator(null);
+        b.setPadding(dp(16), dp(12), dp(16), dp(12));
+        b.setBackground(rounded(Color.rgb(28, 28, 30), BORDER, 12));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.topMargin = dp(4);
+        b.setLayoutParams(lp);
+        b.setOnClickListener(l);
+        return b;
     }
 
     private TextView text(String s, int sp, int color) {
