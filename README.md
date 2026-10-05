@@ -26,7 +26,7 @@ USB MIDI keyboard ──USB──┐
 synth (e.g. FM-1)  ──USB─┘
 ```
 
-**TO** picks the FM-1 automatically (it shows up as "USB Composite Device"). No MIDI cable goes to the FM-1 at all — the notes reach it over its USB cable.
+**TO** picks the FM-1 automatically. Android names USB devices "manufacturer + product", and the FM-1's USB chip is made by Jieli, so it shows up as "Jieli Technology USB Composite Device" (on a Mac, just "USB Composite Device"). No MIDI cable goes to the FM-1 at all — the notes reach it over its USB cable.
 
 ## Hubs and charging
 
@@ -47,11 +47,19 @@ Get the APK from [**Releases**](../../releases/latest), open it on the tablet, a
 ## Use
 
 1. Plug the keyboard and the MIDI interface into a USB hub connected to the tablet. A hub with a **PD charging input** lets the tablet charge at the same time.
-2. Open **MIDI Bridge**. **FROM** should show the keyboard, **TO** the interface — both are picked automatically by name and can be changed; pick the keyboard's main port, not a "Transport"/"DAW" port.
+2. Open **MIDI Bridge**. **FROM** should show the keyboard, **TO** the interface or the FM-1 — both are picked automatically by name and can be changed (tap either one for a big-text list); pick the keyboard's main port, not a "Transport"/"DAW" port. The TO list leaves out the FROM device's own ports, since a keyboard can't play itself.
 3. Tap the big button so it reads **ON**. The first time, allow notifications and allow the app to run in the background without battery limits.
 4. Play. The screen shows the note and its frequency (e.g. `C4   261.6 Hz`) and every message forwarded.
 
-It keeps running when you switch to another app or the screen turns off — a "MIDI Bridge is on" notification shows while it's running, with a **Stop** button. It remembers your devices and reconnects by itself when they're plugged back in. **All notes off** clears stuck notes.
+It keeps running when you switch to another app or the screen turns off — a "MIDI Bridge is on" notification shows while it's running, with a **Stop** button. It remembers your devices and reconnects by itself when they're plugged back in.
+
+**All notes off** sends sustain off + All Notes Off on all 16 channels, to clear stuck notes. It's lit only while something is sounding (a key or the sustain pedal down — including a note stuck because its release got lost) and dimmed otherwise.
+
+**FM-1 as FROM:** the FM-1 never sends MIDI over USB (not even when its knobs are turned), so if it's chosen as FROM there's nothing to forward: TO greys out, and tapping it explains why and offers to pick FROM again.
+
+### Sharing the synth with other apps
+
+While the bridge is ON it holds the synth's USB input, so other apps can't open it directly. Instead, the app adds a virtual MIDI device, **MIDI Bridge** (manufacturer "Android USB MIDI Bridge"): anything another app sends to it is mixed into the stream going to the TO device. A karaoke or MIDI-file player can play the FM-1 while you keep playing the keyboard, without switching the bridge off.
 
 ## What it forwards
 
@@ -70,11 +78,12 @@ Plain Java, no AndroidX or other dependencies. Needs JDK 17+ and the Android SDK
 
 - `Bridge.java` — device lists, connecting, and the forwarding itself (`android.media.midi`)
 - `BridgeService.java` — foreground service + wake lock that keep it running in the background
+- `BridgeMidiService.java` — the virtual "MIDI Bridge" input other apps can send to
 - `MainActivity.java` — the screen, a remote control for the bridge
 
 ## Status
 
-v1.4 is confirmed working on an Android 16 tablet, including in the background (another app in front).
+v1.4 is confirmed working on an Android 16 tablet, including in the background (another app in front). v1.11 (All notes off only while sounding, TO list without the keyboard's own ports, FM-1-as-FROM explanation) builds clean but hasn't been tried on the tablet yet.
 
 ## License
 

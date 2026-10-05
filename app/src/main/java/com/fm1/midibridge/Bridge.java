@@ -50,8 +50,14 @@ public final class Bridge {
     }
 
     private static final String[] FROM_HINTS = {"keystation", "m-audio"};
-    // MIDI interfaces first, then the FM-1 itself on USB (it names itself "USB Composite Device").
-    private static final String[] TO_HINTS = {"arturia", "minifuse", "audiofuse", "fm-1", "fm1", "m-vave", "cuvave", "composite"};
+    // MIDI interfaces first, then the FM-1 itself on USB. Its USB chip is made by Jieli, and
+    // Android names it "<manufacturer> <product>" = "Jieli Technology USB Composite Device".
+    private static final String[] TO_HINTS = {"arturia", "minifuse", "audiofuse", "fm-1", "fm1", "m-vave", "cuvave", "jieli", "composite"};
+    // Devices that only receive: the FM-1 sends no MIDI over USB, even when its knobs are turned.
+    // "USB Composite Device" alone is a stock chip name, so only count it with Jieli's name too.
+    private static final String[] SILENT_HINTS = {"fm-1", "fm1"};
+    public static final String SILENT_FROM = "The FM-1 is all ears, no mouth — it plays the MIDI it gets, "
+            + "but never sends any. Choose your keyboard as FROM.";
     private static final String[] NOTE_NAMES = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
 
     private static Bridge instance;
@@ -81,6 +87,13 @@ public final class Bridge {
     private volatile long msgCount = 0;
     private volatile String lastText = "";
     private volatile String lastNote = "—";
+
+    // What's sounding on the TO device: held notes per channel, and sustain.
+    // Fed from both the keyboard and other apps, so it covers everything we send.
+    private final int[][] held = new int[16][128];
+    private final boolean[] sustain = new boolean[16];
+    private int heldCount;
+    private final Tracker keysTracker = new Tracker(), appTracker = new Tracker();
 
     private Bridge(Context ctx) {
         this.ctx = ctx;
@@ -125,8 +138,13 @@ public final class Bridge {
         return sources;
     }
 
+    /** Places to send to — minus the FROM device's own ports (the keyboard can't play itself). */
     public List<PortRef> dests() {
-        return dests;
+        PortRef from = from();
+        if (from == null) return dests;
+        List<PortRef> out = new ArrayList<>();
+        for (PortRef r : dests) if (r.info.getId() != from.info.getId()) out.add(r);
+        return out;
     }
 
     public PortRef from() {
@@ -152,8 +170,18 @@ public final class Bridge {
         changed();
     }
 
+    /** FROM is a device that never sends MIDI (the FM-1), so there's nothing to forward. */
+    public boolean fromIsSilent() {
+        PortRef from = from();
+        if (from == null) return false;
+        String l = from.label.toLowerCase(Locale.US);
+        for (String h : SILENT_HINTS) if (l.contains(h)) return true;
+        return l.contains("jieli") && l.contains("composite");
+    }
+
     public String status() {
         if (midi == null) return "This device has no MIDI support.";
+        if (fromIsSilent()) return SILENT_FROM;
         if (toPort != null && fromPort != null) return "Forwarding\n" + connectedFrom + "\n→ " + connectedTo;
         if (error != null) return error;
         if (sources.isEmpty() && dests.isEmpty()) return "No MIDI devices found — check the hub.";
@@ -197,7 +225,76 @@ public final class Bridge {
      */
     public void sendFromApp(byte[] msg, int offset, int count) throws IOException {
         MidiInputPort out = toPort;
-        if (out != null) out.send(msg, offset, count);
+        if (out == null) return;
+        out.send(msg, offset, count);
+        appTracker.feed(msg, offset, count);
+    }
+
+    /** True while a note or the sustain pedal is down on the TO device (or a note got stuck). */
+    public synchronized boolean isSounding() {
+        if (heldCount > 0) return true;
+        for (boolean s : sustain) if (s) return true;
+        return false;
+    }
+
+    private synchronized void clearSounding() {
+        for (int[] ch : held) java.util.Arrays.fill(ch, 0);
+        java.util.Arrays.fill(sustain, false);
+        heldCount = 0;
+    }
+
+    private synchronized void track(int status, int d1, int d2) {
+        int ch = status & 0x0F;
+        switch (status & 0xF0) {
+            case 0x90:
+                if (d2 > 0) {
+                    held[ch][d1]++;
+                    heldCount++;
+                    break;
+                }
+                // velocity 0 = note off
+            case 0x80:
+                if (held[ch][d1] > 0) {
+                    held[ch][d1]--;
+                    heldCount--;
+                }
+                break;
+            case 0xB0:
+                if (d1 == 64) sustain[ch] = d2 >= 64;
+                else if (d1 == 120 || d1 == 123) {  // all sound off / all notes off
+                    for (int n = 0; n < 128; n++) heldCount -= held[ch][n];
+                    java.util.Arrays.fill(held[ch], 0);
+                    if (d1 == 120) sustain[ch] = false;
+                }
+                break;
+        }
+    }
+
+    /** Splits one source's byte stream (running status allowed) into messages for track(). */
+    private class Tracker {
+        private int status, d1, have;
+
+        void feed(byte[] msg, int offset, int count) {
+            for (int i = offset; i < offset + count; i++) {
+                int b = msg[i] & 0xFF;
+                if (b >= 0xF8) continue;              // real-time
+                if (b >= 0x80) {                      // new status (SysEx etc. ignored)
+                    status = b < 0xF0 ? b : 0;
+                    have = 0;
+                    continue;
+                }
+                if (status == 0) continue;
+                int type = status & 0xF0;
+                if (type == 0xC0 || type == 0xD0) continue;  // one data byte, nothing to track
+                if (have == 0) {
+                    d1 = b;
+                    have = 1;
+                } else {
+                    track(status, d1, b);
+                    have = 0;                         // running status: next pair reuses it
+                }
+            }
+        }
     }
 
     private boolean isOwnDevice(MidiDeviceInfo info) {
@@ -220,6 +317,7 @@ public final class Bridge {
             }
         } catch (IOException ignored) {
         }
+        clearSounding();
     }
 
     private void changed() {
@@ -247,6 +345,7 @@ public final class Bridge {
             }
             if (n == 0) return;
             out.send(buf, 0, n);
+            keysTracker.feed(buf, 0, n);
             msgCount++;
             lastText = describe(buf, n);
             if ((buf[0] & 0xF0) == 0x90 && n > 2 && buf[2] != 0) {
@@ -380,6 +479,7 @@ public final class Bridge {
         PortRef to = to();
         error = null;
         if (from == null || to == null) return;
+        if (fromIsSilent()) return;
         if (from.info.getId() == to.info.getId()) {
             error = "Pick different devices for From and To.";
             return;
@@ -430,6 +530,7 @@ public final class Bridge {
 
     private void disconnect(boolean releaseNotes) {
         if (releaseNotes) allNotesOff();
+        clearSounding();
         MidiInputPort in = toPort;
         toPort = null;
         closeQuietly(fromPort);

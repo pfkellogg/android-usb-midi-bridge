@@ -38,6 +38,7 @@ public class MainActivity extends Activity {
     private Button fromBtn, toBtn;
     private Button toggle;
     private TextView status, lastMsg, bigNote;
+    private Button panic;
     private final Runnable onChange = this::refresh;
 
     @Override
@@ -88,9 +89,27 @@ public class MainActivity extends Activity {
         Bridge.PortRef from = bridge.from();
         Bridge.PortRef to = bridge.to();
         fromBtn.setText((from != null ? from.label : "(no keyboard found)") + "   ▾");
-        toBtn.setText((to != null ? to.label : "(nothing found — tap to see devices)") + "   ▾");
+        if (bridge.fromIsSilent()) {
+            // Nothing can come out of the FM-1, so every TO is pointless: grey it out.
+            toBtn.setText("Nothing to send — the FM-1 doesn't send MIDI   ⓘ");
+            toBtn.setTextColor(Color.rgb(130, 130, 130));
+            toBtn.setBackground(rounded(Color.rgb(16, 16, 16), Color.rgb(50, 50, 50), 12));
+        } else {
+            toBtn.setText((to != null ? to.label : "(nothing found — tap to see devices)") + "   ▾");
+            toBtn.setTextColor(TEXT);
+            toBtn.setBackground(rounded(Color.rgb(28, 28, 30), BORDER, 12));
+        }
         status.setText(bridge.status());
         updateToggle();
+    }
+
+    /** Tapping the greyed-out TO says why, and offers the fix. */
+    private void explainSilentFrom() {
+        new AlertDialog.Builder(this).setTitle("Nothing to send")
+                .setMessage(Bridge.SILENT_FROM)
+                .setPositiveButton("Choose FROM", (d, w) -> pickPort(true))
+                .setNegativeButton("OK", null)
+                .show();
     }
 
     /** Big-text device list in a dialog — works at any font size, unlike a Spinner. */
@@ -99,7 +118,10 @@ public class MainActivity extends Activity {
         String title = isFrom ? "FROM — the keyboard you play" : "TO — the FM-1 (or MIDI interface)";
         if (items.isEmpty()) {
             new AlertDialog.Builder(this).setTitle(title)
-                    .setMessage("No MIDI devices found. Check the hub and cables.")
+                    .setMessage(isFrom || bridge.sources().isEmpty()
+                            ? "No MIDI devices found. Check the hub and cables."
+                            : "Only the keyboard is plugged in. The tablet doesn't see the FM-1 — "
+                            + "check its USB cable, that it's switched on, and the hub's power.")
                     .setPositiveButton("OK", null).show();
             return;
         }
@@ -174,7 +196,10 @@ public class MainActivity extends Activity {
         divider.setLayoutParams(dlp);
         devices.addView(divider);
         devices.addView(label("TO  ·  FM-1 (USB) or MIDI interface"));
-        toBtn = pickerButton(v -> pickPort(false));
+        toBtn = pickerButton(v -> {
+            if (bridge.fromIsSilent()) explainSilentFrom();
+            else pickPort(false);
+        });
         devices.addView(toBtn);
         root.addView(devices);
 
@@ -198,7 +223,7 @@ public class MainActivity extends Activity {
         bgNote.setPadding(0, dp(8), 0, 0);
         root.addView(bgNote);
 
-        Button panic = new Button(this);
+        panic = new Button(this);
         panic.setText("All notes off");
         panic.setAllCaps(false);
         panic.setTextSize(17);
@@ -209,8 +234,12 @@ public class MainActivity extends Activity {
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(56));
         plp.topMargin = dp(12);
         panic.setLayoutParams(plp);
-        panic.setOnClickListener(v -> bridge.allNotesOff());
+        panic.setOnClickListener(v -> {
+            bridge.allNotesOff();
+            updatePanic();
+        });
         root.addView(panic);
+        updatePanic();
 
         LinearLayout info = card();
         LinearLayout.LayoutParams ilp = new LinearLayout.LayoutParams(
@@ -305,6 +334,16 @@ public class MainActivity extends Activity {
         toggle.setTextColor(Color.WHITE);
     }
 
+    /** "All notes off" is only live while something is sounding; dimmed otherwise. */
+    private void updatePanic() {
+        boolean sounding = bridge.isSounding();
+        if (panic.isEnabled() == sounding && panic.getTag() != null) return;
+        panic.setTag(Boolean.TRUE);
+        panic.setEnabled(sounding);
+        panic.setTextColor(sounding ? TEXT : Color.rgb(110, 110, 110));
+        panic.setBackground(rounded(CARD, sounding ? BORDER : Color.rgb(50, 50, 50), 14));
+    }
+
     private final Runnable ticker = new Runnable() {
         private long shownCount = -1;
 
@@ -316,6 +355,7 @@ public class MainActivity extends Activity {
                 lastMsg.setText(count > 0 ? bridge.lastText() + "\n" + count + " messages forwarded" : "—");
                 bigNote.setText(bridge.lastNote());
             }
+            updatePanic();
             ui.postDelayed(this, 100);
         }
     };
