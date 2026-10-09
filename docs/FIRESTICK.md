@@ -12,16 +12,24 @@ M-VAVE FM-1 ───────────────USB───┘        
                                                wall power
 ```
 
-Tested on a Fire TV Stick 4K (1st gen, `AFTMM`, Fire OS 6.7.1.1 = Android 7.1).
-It reports USB host and Android MIDI support, and sees both the Keystation and
-the FM-1 ("Jieli Technology USB Composite Device") through the hub.
+Tested on two Fire TV Stick 4K (1st gen, `AFTMM`, Fire OS 6.7.1.1 = Android
+7.1) sticks, the 4th (.100) and 5th (.104) Fire TVs. They report USB host and
+Android MIDI support, and see both the Keystation and the FM-1 ("Jieli
+Technology USB Composite Device") through the hub.
 
 ## Hardware
 
-The stick has one micro-USB port, and it's also the stick's power input. So
-the hub must be a **powered micro-USB OTG hub** that powers the stick *and*
-the hub from one adapter. The 1-to-3 Y hub cable in the main README won't
-work here: nothing would power the stick.
+The stick has one micro-USB port, and it's also the stick's power input.
+Two hubs have worked on the 4th Fire TV (.100), 2026-10-09:
+
+- a **powered micro-USB OTG hub**, which powers the stick and the hub from one
+  adapter (the setup drawn above; also used on .104), and
+- the **1-to-3 USB "Y" hub cable** from the main README
+  ([Amazon](https://www.amazon.com/dp/B0GH45DKS7)), with the keyboard and the
+  FM-1 on two of its sockets.
+
+Either way the stick needs power while it hosts the keyboard and the FM-1;
+if it reboots or the devices drop out, use the powered hub.
 
 ## Build and install
 
@@ -189,4 +197,5 @@ Release builds don't include it.
   (2026-10-09) although the notes reached the FM-1. With the real keyboard the
   note popup works (seen: B3, 246.9 Hz).
 - Chords haven't been checked with real keys on the stick yet.
-- Installed on both sticks (4th Fire TV .100, 5th .104); only .104 has been tested with the keyboard and FM-1.
+- Installed and tested with the keyboard and FM-1 on both sticks (4th Fire
+  TV .100, 5th .104).
