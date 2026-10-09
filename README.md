@@ -16,6 +16,19 @@ USB MIDI interface ──USB─┘
 
 Built for an M-Audio Keystation 49 MK3 (USB only) playing an M-VAVE FM-1 through an Arturia interface's MIDI OUT, but it works with any class-compliant USB MIDI devices Android can see.
 
+### Why an app? (A MiniLab plays the FM-1 with just a cable)
+
+A keyboard with a **5-pin DIN MIDI OUT** jack, like the Arturia MiniLab, plays the FM-1 with one MIDI cable into the FM-1's MIDI IN, no app needed. DIN MIDI is a direct one-way link: the keyboard sends, the synth listens, and neither side has to be in charge.
+
+**The Keystation 49 MK3 has no 5-pin DIN MIDI OUT, only USB**, and USB doesn't work that way. Every USB connection has one **host** (a computer, phone or tablet) with **devices** plugged into it. The Keystation and the FM-1 are both devices, so plugging one into the other does nothing, and a hub on its own doesn't help either: a hub only connects devices to a host. Something has to be the host, read the keys from the keyboard and send them on to the synth.
+
+That's what this app does: it turns an Android tablet or phone into the host in the middle.
+
+| Keyboard | MIDI out | How it plays the FM-1 |
+|---|---|---|
+| Arturia MiniLab | 5-pin DIN | MIDI cable straight to the FM-1's MIDI IN |
+| M-Audio Keystation 49 MK3 | USB only | This app on an Android tablet or phone, with both on a USB hub |
+
 ### Bare-bones setup: synth on USB, no MIDI interface
 
 If the synth has its own USB MIDI port (the FM-1 does), skip the interface and plug the synth into the tablet directly:
