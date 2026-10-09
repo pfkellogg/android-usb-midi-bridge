@@ -9,6 +9,7 @@ import android.media.midi.MidiInputPort;
 import android.media.midi.MidiManager;
 import android.media.midi.MidiOutputPort;
 import android.media.midi.MidiReceiver;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -87,13 +88,17 @@ public final class Bridge {
     private volatile long msgCount = 0;
     private volatile String lastText = "";
     private volatile String lastNote = "—";
+    private volatile int lastNoteNum = -1;
+    private volatile long noteOnCount = 0;
 
     // What's sounding on the TO device: held notes per channel, and sustain.
     // Fed from both the keyboard and other apps, so it covers everything we send.
     private final int[][] held = new int[16][128];
     private final boolean[] sustain = new boolean[16];
     private int heldCount;
-    private final Tracker keysTracker = new Tracker(), appTracker = new Tracker();
+    // Keys down on the keyboard alone (not other apps' notes), for chord names.
+    private final int[] keysDown = new int[128];
+    private final Tracker keysTracker = new Tracker(true), appTracker = new Tracker(false);
 
     private Bridge(Context ctx) {
         this.ctx = ctx;
@@ -125,7 +130,8 @@ public final class Bridge {
         prefs.edit().putBoolean("on", want).apply();
         Intent svc = new Intent(ctx, BridgeService.class);
         if (want) {
-            ctx.startForegroundService(svc);
+            if (Build.VERSION.SDK_INT >= 26) ctx.startForegroundService(svc);
+            else ctx.startService(svc);  // Fire TV (Android 7.1)
             tryConnect();
         } else {
             disconnect(true);
@@ -211,6 +217,16 @@ public final class Bridge {
         return lastNote;
     }
 
+    /** MIDI number of the last key played on the keyboard, or -1 if none yet. */
+    public int lastNoteNum() {
+        return lastNoteNum;
+    }
+
+    /** Goes up by one for every key pressed on the keyboard. */
+    public long noteOnCount() {
+        return noteOnCount;
+    }
+
     public void addListener(Runnable r) {
         listeners.add(r);
     }
@@ -230,6 +246,11 @@ public final class Bridge {
         appTracker.feed(msg, offset, count);
     }
 
+    /** True when sendFromApp() reaches a device (the TO port is open). */
+    public boolean canSendFromApp() {
+        return toPort != null;
+    }
+
     /** True while a note or the sustain pedal is down on the TO device (or a note got stuck). */
     public synchronized boolean isSounding() {
         if (heldCount > 0) return true;
@@ -237,19 +258,29 @@ public final class Bridge {
         return false;
     }
 
+    /** Keys held down on the keyboard right now (sustain pedal not counted), lowest first. */
+    public synchronized int[] keysDown() {
+        int count = 0;
+        int[] notes = new int[128];
+        for (int n = 0; n < 128; n++) if (keysDown[n] > 0) notes[count++] = n;
+        return java.util.Arrays.copyOf(notes, count);
+    }
+
     private synchronized void clearSounding() {
         for (int[] ch : held) java.util.Arrays.fill(ch, 0);
         java.util.Arrays.fill(sustain, false);
+        java.util.Arrays.fill(keysDown, 0);
         heldCount = 0;
     }
 
-    private synchronized void track(int status, int d1, int d2) {
+    private synchronized void track(int status, int d1, int d2, boolean fromKeys) {
         int ch = status & 0x0F;
         switch (status & 0xF0) {
             case 0x90:
                 if (d2 > 0) {
                     held[ch][d1]++;
                     heldCount++;
+                    if (fromKeys) keysDown[d1]++;
                     break;
                 }
                 // velocity 0 = note off
@@ -258,12 +289,14 @@ public final class Bridge {
                     held[ch][d1]--;
                     heldCount--;
                 }
+                if (fromKeys && keysDown[d1] > 0) keysDown[d1]--;
                 break;
             case 0xB0:
                 if (d1 == 64) sustain[ch] = d2 >= 64;
                 else if (d1 == 120 || d1 == 123) {  // all sound off / all notes off
                     for (int n = 0; n < 128; n++) heldCount -= held[ch][n];
                     java.util.Arrays.fill(held[ch], 0);
+                    if (fromKeys) java.util.Arrays.fill(keysDown, 0);
                     if (d1 == 120) sustain[ch] = false;
                 }
                 break;
@@ -272,7 +305,12 @@ public final class Bridge {
 
     /** Splits one source's byte stream (running status allowed) into messages for track(). */
     private class Tracker {
+        private final boolean fromKeys;
         private int status, d1, have;
+
+        Tracker(boolean fromKeys) {
+            this.fromKeys = fromKeys;
+        }
 
         void feed(byte[] msg, int offset, int count) {
             for (int i = offset; i < offset + count; i++) {
@@ -290,7 +328,7 @@ public final class Bridge {
                     d1 = b;
                     have = 1;
                 } else {
-                    track(status, d1, b);
+                    track(status, d1, b, fromKeys);
                     have = 0;                         // running status: next pair reuses it
                 }
             }
@@ -337,11 +375,13 @@ public final class Bridge {
             if (out == null) return;
             // Drop real-time bytes (clock, active sensing, etc.) — they can
             // appear anywhere in the stream and the FM-1 has no use for them.
+            // Channel messages are moved to channel 1: the FM-1 only listens
+            // there, and a keyboard knocked onto another channel goes silent.
             int n = 0;
             for (int i = offset; i < offset + count && n < buf.length; i++) {
                 int b = msg[i] & 0xFF;
                 if (b >= 0xF8) continue;
-                buf[n++] = msg[i];
+                buf[n++] = (b >= 0x80 && b < 0xF0) ? (byte) (b & 0xF0) : msg[i];
             }
             if (n == 0) return;
             out.send(buf, 0, n);
@@ -351,6 +391,8 @@ public final class Bridge {
             if ((buf[0] & 0xF0) == 0x90 && n > 2 && buf[2] != 0) {
                 int note = buf[1] & 0x7F;
                 lastNote = String.format(Locale.US, "%s   %.1f Hz", noteName(note), noteHz(note));
+                lastNoteNum = note;
+                noteOnCount++;
             }
         }
     }
@@ -384,11 +426,15 @@ public final class Bridge {
     }
 
     /** Equal-tempered pitch, A4 (note 69) = 440 Hz. */
-    static double noteHz(int note) {
+    public static double noteHz(int note) {
         return 440.0 * Math.pow(2, (note - 69) / 12.0);
     }
 
-    static String noteName(int note) {
+    public static String pitchClass(int note) {
+        return NOTE_NAMES[note % 12];
+    }
+
+    public static String noteName(int note) {
         return NOTE_NAMES[note % 12] + (note / 12 - 1);
     }
 
@@ -499,6 +545,11 @@ public final class Bridge {
                 finishConnect(from, to, tDev);
             }, ui);
         }, ui);
+    }
+
+    /** Sends bytes down the keyboard's path, as if played on it. For the debug-only TestPlayer (src/debug). */
+    void playAsKeyboard(byte[] msg) throws IOException {
+        new Forwarder().onSend(msg, 0, msg.length, 0);
     }
 
     private void finishConnect(PortRef from, PortRef to, MidiDevice tDev) {

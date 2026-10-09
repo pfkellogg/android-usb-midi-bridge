@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- MIDI Bridge icon: Golden Gate badge with a keyboard roadway. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <group>
+        <group android:name="art">
+            <clip-path android:pathData="M54,22a32,32 0 1,1 0,64a32,32 0 1,1 0,-64z" />
+            <!-- Sky glow and bay -->
+            <path android:fillColor="#16324A" android:pathData="M22,22h64v48h-64z" />
+            <path android:fillColor="#0B2236" android:pathData="M22,70h64v16h-64z" />
+            <path android:strokeColor="#50C8FF" android:strokeWidth="1.4" android:strokeLineCap="round"
+                android:pathData="M28,75q4,-2 8,0t8,0t8,0t8,0t8,0t8,0t8,0M32,80q4,-2 8,0t8,0t8,0t8,0t8,0t8,0" />
+            <!-- Main cables: side spans and the sag between the towers -->
+            <path android:strokeColor="#F04A00" android:strokeWidth="1.8" android:strokeLineCap="round"
+                android:pathData="M18,60Q31,55 40,34M40,34Q54,62 68,34M68,34Q77,55 90,60" />
+            <!-- Suspender cables -->
+            <path android:strokeColor="#F04A00" android:strokeWidth="1"
+                android:pathData="M46,44.1V63M50,47.4V63M54,48.5V63M58,47.4V63M62,44.1V63M33,52V63M29,56V63M75,52V63M79,56V63" />
+            <!-- Towers with cross braces -->
+            <path android:fillColor="#F04A00"
+                android:pathData="M37.5,32h2.5v42h-2.5zM41,32h2.5v42h-2.5zM37.5,32h6v2.5h-6zM37.5,42h6v2h-6zM37.5,52h6v2h-6zM65,32h2.5v42h-2.5zM68.5,32h2.5v42h-2.5zM65,32h6v2.5h-6zM65,42h6v2h-6zM65,52h6v2h-6z" />
+            <!-- Roadway as a keyboard: white keys with black keys on top -->
+            <path android:fillColor="#F5F5F5" android:pathData="M20,63h68v6h-68z" />
+            <path android:fillColor="#101010"
+                android:pathData="M25,63h2v3.5h-2zM30,63h2v3.5h-2zM38,63h2v3.5h-2zM43,63h2v3.5h-2zM48,63h2v3.5h-2zM56,63h2v3.5h-2zM61,63h2v3.5h-2zM69,63h2v3.5h-2zM74,63h2v3.5h-2zM79,63h2v3.5h-2z" />
+        </group>
+        <!-- Badge ring -->
+        <path android:strokeColor="#50C8FF" android:strokeWidth="2.6"
+            android:pathData="M54,22a32,32 0 1,1 0,64a32,32 0 1,1 0,-64z" />
+    </group>
+</vector>

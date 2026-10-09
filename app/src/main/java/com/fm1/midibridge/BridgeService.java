@@ -32,8 +32,10 @@ public class BridgeService extends Service {
     public void onCreate() {
         super.onCreate();
         bridge = Bridge.get(this);
-        NotificationManager nm = getSystemService(NotificationManager.class);
-        nm.createNotificationChannel(new NotificationChannel(CHANNEL, "MIDI Bridge running", NotificationManager.IMPORTANCE_LOW));
+        if (Build.VERSION.SDK_INT >= 26) {  // no channels before Android 8 (Fire TV is 7.1)
+            NotificationManager nm = getSystemService(NotificationManager.class);
+            nm.createNotificationChannel(new NotificationChannel(CHANNEL, "MIDI Bridge running", NotificationManager.IMPORTANCE_LOW));
+        }
         goForeground(buildNotification());
         wakeLock = getSystemService(PowerManager.class).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MidiBridge:forwarding");
         wakeLock.acquire();
@@ -88,7 +90,10 @@ public class BridgeService extends Service {
         PendingIntent stop = PendingIntent.getService(this, 1,
                 new Intent(this, BridgeService.class).setAction(ACTION_STOP),
                 PendingIntent.FLAG_IMMUTABLE);
-        return new Notification.Builder(this, CHANNEL)
+        Notification.Builder nb = Build.VERSION.SDK_INT >= 26
+                ? new Notification.Builder(this, CHANNEL)
+                : new Notification.Builder(this);
+        return nb
                 .setSmallIcon(android.R.drawable.ic_media_play)
                 .setContentTitle("MIDI Bridge is on")
                 .setContentText(shownText)

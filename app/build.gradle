@@ -10,8 +10,33 @@ android {
         applicationId "com.fm1.midibridge"
         minSdk 29
         targetSdk 34
-        versionCode 11
-        versionName "1.11"
+        versionCode 22
+        versionName "1.22"
+        manifestPlaceholders = [appLabel: "MIDI Bridge"]
+    }
+
+    // oss  = the free bridge, built from this public repo alone.
+    // play = the Google Play build: bridge + Pro singing tuner, whose source lives in
+    //        ../pro (a separate private repo, git-ignored here).
+    // firetv = the free bridge for Fire TV sticks (Fire OS 6 = Android 7.1): lower
+    //        minSdk plus a TV launcher entry (src/firetv).
+    flavorDimensions = ["dist"]
+    productFlavors {
+        oss { dimension "dist" }
+        play { dimension "dist" }
+        firetv {
+            dimension "dist"
+            minSdk 25
+            versionNameSuffix "-firetv"
+            manifestPlaceholders = [appLabel: "MIDI Bridge For Firestick"]
+        }
+    }
+    sourceSets {
+        play {
+            java.srcDirs += ["../pro/java"]
+            manifest.srcFile "../pro/AndroidManifest.xml"
+            assets.srcDirs += ["../pro/assets"]  // the backing-track sound bank (~32 MB)
+        }
     }
 
     compileOptions {
