@@ -1,32 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- MIDI Bridge icon: Golden Gate badge with a keyboard roadway. -->
+<!-- MIDI Bridge icon: Golden Gate towers and cable over a keyboard roadway. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
-    <group>
-        <group android:name="art">
-            <clip-path android:pathData="M54,22a32,32 0 1,1 0,64a32,32 0 1,1 0,-64z" />
-            <!-- Sky glow and bay -->
-            <path android:fillColor="#16324A" android:pathData="M22,22h64v48h-64z" />
-            <path android:fillColor="#0B2236" android:pathData="M22,70h64v16h-64z" />
-            <path android:strokeColor="#50C8FF" android:strokeWidth="1.4" android:strokeLineCap="round"
-                android:pathData="M28,75q4,-2 8,0t8,0t8,0t8,0t8,0t8,0t8,0M32,80q4,-2 8,0t8,0t8,0t8,0t8,0t8,0" />
-            <!-- Main cables: side spans and the sag between the towers -->
-            <path android:strokeColor="#F04A00" android:strokeWidth="1.8" android:strokeLineCap="round"
-                android:pathData="M18,60Q31,55 40,34M40,34Q54,62 68,34M68,34Q77,55 90,60" />
-            <!-- Suspender cables -->
-            <path android:strokeColor="#F04A00" android:strokeWidth="1"
-                android:pathData="M46,44.1V63M50,47.4V63M54,48.5V63M58,47.4V63M62,44.1V63M33,52V63M29,56V63M75,52V63M79,56V63" />
-            <!-- Towers with cross braces -->
-            <path android:fillColor="#F04A00"
-                android:pathData="M37.5,32h2.5v42h-2.5zM41,32h2.5v42h-2.5zM37.5,32h6v2.5h-6zM37.5,42h6v2h-6zM37.5,52h6v2h-6zM65,32h2.5v42h-2.5zM68.5,32h2.5v42h-2.5zM65,32h6v2.5h-6zM65,42h6v2h-6zM65,52h6v2h-6z" />
-            <!-- Roadway as a keyboard: white keys with black keys on top -->
-            <path android:fillColor="#F5F5F5" android:pathData="M20,63h68v6h-68z" />
-            <path android:fillColor="#101010"
-                android:pathData="M25,63h2v3.5h-2zM30,63h2v3.5h-2zM38,63h2v3.5h-2zM43,63h2v3.5h-2zM48,63h2v3.5h-2zM56,63h2v3.5h-2zM61,63h2v3.5h-2zM69,63h2v3.5h-2zM74,63h2v3.5h-2zM79,63h2v3.5h-2z" />
-        </group>
-        <!-- Badge ring -->
-        <path android:strokeColor="#50C8FF" android:strokeWidth="2.6"
-            android:pathData="M54,22a32,32 0 1,1 0,64a32,32 0 1,1 0,-64z" />
-    </group>
+        <!-- Main cable: side spans and the sag between the towers -->
+        <path android:strokeColor="#F04A00" android:strokeWidth="2.8" android:strokeLineCap="round"
+            android:pathData="M22,56Q32,50 40,30M40,30Q54,58 68,30M68,30Q76,50 86,56" />
+        <!-- A few suspenders -->
+        <path android:strokeColor="#F04A00" android:strokeWidth="1.6"
+            android:pathData="M47,41V60M54,44V60M61,41V60" />
+        <!-- Towers: two legs, cap and one cross brace each -->
+        <path android:fillColor="#F04A00"
+            android:pathData="M36,28h3v50h-3zM41,28h3v50h-3zM36,28h8v4h-8zM36,44h8v3h-8zM64,28h3v50h-3zM69,28h3v50h-3zM64,28h8v4h-8zM64,44h8v3h-8z" />
+        <!-- Roadway as a keyboard: 9 white keys, black keys in 2s and 3s -->
+        <path android:fillColor="#F5F5F5" android:pathData="M21,60h66v12h-66z" />
+        <path android:fillColor="#0E141A"
+            android:pathData="M28,60h0.8v12h-0.8zM35.3,60h0.8v12h-0.8zM42.7,60h0.8v12h-0.8zM50,60h0.8v12h-0.8zM57.3,60h0.8v12h-0.8zM64.7,60h0.8v12h-0.8zM72,60h0.8v12h-0.8zM79.3,60h0.8v12h-0.8z" />
+        <path android:fillColor="#0E141A"
+            android:pathData="M26.3,60h4v7h-4zM33.6,60h4v7h-4zM48.3,60h4v7h-4zM55.6,60h4v7h-4zM62.9,60h4v7h-4zM77.6,60h4v7h-4z" />
 </vector>

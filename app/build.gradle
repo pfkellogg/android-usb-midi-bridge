@@ -27,8 +27,10 @@ android {
         firetv {
             dimension "dist"
             minSdk 25
-            versionCode 24  // bumped so Fire OS drops its cached launcher icon
+            applicationIdSuffix ".firetv"  // own ID: the Fire TV Appstore never re-makes a sideloaded app's tile picture
+            versionCode 26  // bumped so Fire OS drops its cached launcher icon
             versionNameSuffix "-firetv"
+            versionName "1.23"  // new name too: the Your Apps grid caches icons by it
             manifestPlaceholders = [appLabel: "MIDI Bridge For Firestick"]
         }
     }

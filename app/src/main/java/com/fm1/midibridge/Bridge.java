@@ -552,10 +552,39 @@ public final class Bridge {
         new Forwarder().onSend(msg, 0, msg.length, 0);
     }
 
+    /**
+     * Opening a port is a blocking call into the MIDI service, and on Fire OS it
+     * can hang (a USB port left stuck by an app that was killed while
+     * connected). Open them off the main thread so the screen still comes up,
+     * showing "Connecting…", instead of an ANR and a black screen.
+     */
+    private Handler portOpener;
+
     private void finishConnect(PortRef from, PortRef to, MidiDevice tDev) {
         toDev = tDev;
-        MidiInputPort in = tDev.openInputPort(to.port);
-        fromPort = fromDev.openOutputPort(from.port);
+        MidiDevice fDev = fromDev;
+        if (portOpener == null) {
+            android.os.HandlerThread t = new android.os.HandlerThread("MidiBridge-ports");
+            t.start();
+            portOpener = new Handler(t.getLooper());
+        }
+        portOpener.post(() -> {
+            MidiInputPort in = tDev.openInputPort(to.port);
+            MidiOutputPort out = fDev.openOutputPort(from.port);
+            ui.post(() -> portsOpened(from, to, fDev, in, out));
+        });
+    }
+
+    private void portsOpened(PortRef from, PortRef to, MidiDevice fDev, MidiInputPort in, MidiOutputPort out) {
+        if (fDev != fromDev) {  // disconnected while we were opening
+            closeQuietly(in);
+            closeQuietly(out);
+            connecting = false;
+            tryConnect();
+            changed();
+            return;
+        }
+        fromPort = out;
         toPort = in;
         connecting = false;
         if (toPort == null || fromPort == null) {

@@ -2,7 +2,8 @@
 
 The bridge as a Fire TV app: a Fire TV Stick plays the FM-1 from a USB-only
 keyboard, no tablet needed. It's the `firetv` build of this project, shown on
-the Fire TV as **MIDI Bridge For Firestick**.
+the Fire TV as **MIDI Bridge For Firestick**, with its own app ID
+`com.fm1.midibridge.firetv` (v1.23-firetv).
 
 ```
 M-Audio Keystation 49 MK3 ──USB──┐
@@ -36,8 +37,17 @@ Applications → Manage Installed Applications → MIDI Bridge For Firestick →
 Launch application.
 
 The FROM / TO devices are picked automatically; check them, then press
-**ON**. Uninstalling (or `adb uninstall`) forgets the chosen devices and the
-ON state.
+**ON**. Uninstalling (or `adb uninstall com.fm1.midibridge.firetv`) forgets
+the chosen devices and the ON state.
+
+### If it stops bridging
+
+If the status stays on "Connecting…", or it's ON but the keys don't play,
+**unplug the keyboard's USB cable, wait a few seconds, and plug it back in**.
+Android's MIDI service on Fire OS can be left holding a stale port (seen after
+the app was killed or reinstalled while connected: `dumpsys midi` showed the
+FM-1's port marked open with no app connected, and both devices on the same
+ALSA card). Replugging resets it; a power cycle of the stick and hub does too.
 
 ## What's different from the tablet build
 
@@ -48,32 +58,46 @@ unchanged on Android 10+:
 - **Android 7.1 fallbacks** in shared code: no notification channel before
   Android 8 (`BridgeService.java`), and `startService` instead of
   `startForegroundService` (`Bridge.java`).
+- **Own app ID** `com.fm1.midibridge.firetv` (`applicationIdSuffix`), so it
+  installs next to the tablet app, and the Fire TV Appstore made a fresh tile
+  picture for it (see Icon).
 - **TV launcher entry, banner, no touchscreen required**:
-  `app/src/firetv/AndroidManifest.xml`, `app/src/firetv/res/drawable/tv_banner.xml`.
+  `app/src/firetv/AndroidManifest.xml`, `app/src/firetv/res/drawable-xhdpi/tv_banner.png`.
 - **Remote focus ring**: on TVs, `MainActivity.showRemoteFocus()` draws a cyan
   ring around the control the D-pad is on (the custom button backgrounds hide
   Android's own).
+- **Ports open off the main thread** (shared code, `Bridge.finishConnect()`):
+  opening a MIDI port is a blocking call, and on Fire OS a stuck port froze
+  the app on a black screen (ANR). Now the screen comes up and shows
+  "Connecting…" instead.
 - **Name**: `manifestPlaceholders appLabel` — "MIDI Bridge For Firestick" here,
   "MIDI Bridge" elsewhere. The screen title follows the app name.
 
 ## Icon
 
-A Golden Gate badge: orange towers and cables over the bay, with a
-piano-keyboard roadway, in a cyan ring.
+The Golden Gate's two towers and main cable over a piano-keyboard roadway, on a
+navy square.
 
 - Fire TV (Android 7.1) uses the **PNG** icons in `app/src/main/res/mipmap-*/`
-  and the PNG banner `app/src/firetv/res/drawable-xhdpi/tv_banner.png`. Its
-  launcher shows a grey placeholder for a vector (XML) icon, and stretches an
-  icon with transparent corners to fill the tile, so the PNGs are opaque
-  squares (badge on navy), like Zorro's.
-- Android 8+ uses the adaptive icon `mipmap-anydpi-v26/ic_launcher.xml`
-  (vector foreground `drawable/ic_launcher_foreground.xml`).
-- Fire OS caches launcher icons per app version: after changing the icon,
-  bump the firetv `versionCode` (`app/build.gradle`), or it keeps showing the
-  old one, even across an uninstall.
+  and the PNG banner `app/src/firetv/res/drawable-xhdpi/tv_banner.png`. The
+  firetv build has no adaptive icon (`mipmap-anydpi-v26` is only in `src/oss`
+  and `src/play`), so the PNGs are all it declares, like Zorro.
+- Android 8+ (oss / play) uses the adaptive icon `mipmap-anydpi-v26/ic_launcher.xml`
+  with the vector foreground `drawable/ic_launcher_foreground.xml`.
+- **How the Fire TV "Your Apps & Channels" grid gets a sideloaded app's
+  picture** (read from the Appstore app, `com.amazon.venezia`): when it first
+  records a sideloaded package it saves a tile image made from the app's icon
+  (`SideloadedAppManagerService.insertSingleSideloadedAppImage`). Updates never
+  remake it. With no saved image, the grid loads `file:` + the icon's
+  `android.resource://` address, which fails, and shows its grey "apps"
+  placeholder (logcat: `Glide: Load failed for file:android.resource://…`).
+  - The first `com.fm1.midibridge` record dated from the system play-button
+    icon and kept failing across uninstalls and version bumps. Giving the
+    Fire TV build its own app ID got a fresh, correct tile.
+  - So: get the icon right **before** first installing a new package on a
+    stick. After that, changing it may need a new app ID.
 - Fire OS limits for sideloaded apps (seen with Zorro too): the home-screen
-  banner usually isn't shown, and the "Your Apps & Channels" grid may draw the
-  icon in a single colour.
+  banner usually isn't shown.
 
 ## Chords
 
@@ -99,7 +123,7 @@ before.
 the FM-1 sounds and the display reacts as if they were played:
 
 ```sh
-adb shell am broadcast -n com.fm1.midibridge/.TestPlayer -a com.fm1.midibridge.TEST_PLAY \
+adb shell am broadcast -n com.fm1.midibridge.firetv/com.fm1.midibridge.TestPlayer -a com.fm1.midibridge.TEST_PLAY \
     --es play "'60,64,67;57,60,64,67;57,60,65;55,59,62,65;72'" --ei ms 2500
 ```
 
@@ -116,3 +140,4 @@ Release builds don't include it.
   real keys or whether the screenshots were stale. Next step: play the real
   keyboard and watch the screen.
 - Chords haven't been checked with real keys on the stick yet.
+- The 4th Fire TV (.100) still has the older `com.fm1.midibridge` build.
