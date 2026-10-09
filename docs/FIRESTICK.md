@@ -37,17 +37,33 @@ Applications → Manage Installed Applications → MIDI Bridge For Firestick →
 Launch application.
 
 The FROM / TO devices are picked automatically; check them, then press
-**ON**. Uninstalling (or `adb uninstall com.fm1.midibridge.firetv`) forgets
-the chosen devices and the ON state.
+**ON**. The first time, Fire OS asks to let the app use each USB device (the
+Keystation, then the FM-1): choose **Allow Always**, so it isn't asked again
+after a restart. Uninstalling (or `adb uninstall com.fm1.midibridge.firetv`)
+forgets the chosen devices, the ON state and those permissions.
+
+After that it just works: **restart the stick with everything plugged in and
+the bridge comes back by itself**, without opening the app (see "Direct USB"
+and "Start on boot" below). Tested 2026-10-09.
 
 ### If it stops bridging
 
-If the status stays on "Connecting…", or it's ON but the keys don't play,
-**unplug the keyboard's USB cable, wait a few seconds, and plug it back in**.
-Android's MIDI service on Fire OS can be left holding a stale port (seen after
-the app was killed or reinstalled while connected: `dumpsys midi` showed the
-FM-1's port marked open with no app connected, and both devices on the same
-ALSA card). Replugging resets it; a power cycle of the stick and hub does too.
+Open the app and read the status card. If it asks to allow a USB device,
+choose **Allow Always**. If it's stuck on "Connecting…", unplug the keyboard's
+USB cable for a few seconds and plug it back in (that re-registers it with
+Fire OS).
+
+### Other apps that open at startup
+
+A Fire TV app can start itself at every boot, and Fire OS doesn't let adb turn
+that off for another app. IPTV Smarters Pro does this; its own switch is
+**Settings → General Settings → "AutoStart on Bootup"** (its boot receiver
+checks the `auto_start` preference, default on).
+
+### "Allow USB debugging?" after a restart
+
+That's adb asking for a computer. Tick **Always allow from this computer**,
+then OK, and that computer isn't asked again.
 
 ## What's different from the tablet build
 
@@ -66,12 +82,48 @@ unchanged on Android 10+:
 - **Remote focus ring**: on TVs, `MainActivity.showRemoteFocus()` draws a cyan
   ring around the control the D-pad is on (the custom button backgrounds hide
   Android's own).
+- **Direct USB MIDI** (`UsbMidi.java`, `Bridge.connectUsb()`): see below.
+- **Start on boot** (`app/src/firetv/.../BootReceiver.java`): after a restart,
+  if the bridge was ON it turns itself back on (starts `BridgeService`), so the
+  keyboard plays without opening the app.
 - **Ports open off the main thread** (shared code, `Bridge.finishConnect()`):
   opening a MIDI port is a blocking call, and on Fire OS a stuck port froze
   the app on a black screen (ANR). Now the screen comes up and shows
   "Connecting…" instead.
 - **Name**: `manifestPlaceholders appLabel` — "MIDI Bridge For Firestick" here,
   "MIDI Bridge" elsewhere. The screen title follows the app name.
+
+## Direct USB
+
+**The problem:** when the stick boots with the Keystation and the FM-1 both
+already plugged in, Fire OS registers them on the **same ALSA sound card**
+(`dumpsys midi` shows `alsa_card=1` for both). Android's MIDI service then
+can't open the keyboard's port: the call hangs, nothing plays, and only
+unplugging and replugging the keyboard (so it re-registers with its own card)
+fixes it. No app can renumber the sound cards.
+
+**The fix:** on Android 7.x (`Bridge.directUsb()`, i.e. only the Fire TV
+build), the app drives USB MIDI devices itself with Android's USB host API and
+never touches ALSA or the MIDI service's ports:
+
+- `UsbMidi.open()` finds the device's MIDI-streaming interface (USB audio
+  class 1, subclass 3), opens the device and claims that interface (taking it
+  from the kernel driver).
+- A reader thread pulls 4-byte USB MIDI event packets off the bulk IN
+  endpoint, keeps the chosen port's (cable's) messages, and hands them to the
+  same `Forwarder` as before (channel-1 remap, note display, chords).
+- `UsbMidi.sender()` turns a MIDI byte stream (running status and SysEx
+  allowed) back into USB MIDI packets for the bulk OUT endpoint, so the FM-1,
+  **All notes off** and other apps' notes (the virtual "MIDI Bridge" input)
+  all go the same way.
+- The MIDI service is still used to **list and name** the devices, so the
+  FROM / TO lists, saved choices and status read as before.
+- Each device needs a USB permission, asked once (`UsbManager.requestPermission`);
+  "Allow Always" saves it for the package.
+- Unplugging a MIDI device (`ACTION_USB_DEVICE_DETACHED`) drops the link;
+  plugging it back reconnects.
+
+The phone/tablet builds (Android 10+) keep using Android's MIDI service.
 
 ## Icon
 
@@ -133,11 +185,8 @@ Release builds don't include it.
 
 ## Known issues
 
-- **Note/chord display doesn't update during TestPlayer runs.** On the stick
-  (2026-10-09) the log showed the notes forwarded to the FM-1 (message count
-  rising, `forwarding=true`), but the screen didn't change: no popup, and
-  **All notes off** stayed dim. Not yet known whether it also happens with
-  real keys or whether the screenshots were stale. Next step: play the real
-  keyboard and watch the screen.
+- **Note/chord display during TestPlayer runs** didn't update in one test
+  (2026-10-09) although the notes reached the FM-1. With the real keyboard the
+  note popup works (seen: B3, 246.9 Hz).
 - Chords haven't been checked with real keys on the stick yet.
 - The 4th Fire TV (.100) still has the older `com.fm1.midibridge` build.

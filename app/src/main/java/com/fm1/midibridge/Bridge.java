@@ -1,8 +1,13 @@
 package com.fm1.midibridge;
 
+import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.hardware.usb.UsbDevice;
+import android.hardware.usb.UsbManager;
 import android.media.midi.MidiDevice;
 import android.media.midi.MidiDeviceInfo;
 import android.media.midi.MidiInputPort;
@@ -80,8 +85,11 @@ public final class Bridge {
     private boolean on;
     private boolean connecting;
     private MidiDevice fromDev, toDev;
-    private MidiOutputPort fromPort;
-    private volatile MidiInputPort toPort;
+    private java.io.Closeable fromPort;      // MidiOutputPort, or the UsbMidi it reads from
+    private volatile MidiReceiver toPort;    // MidiInputPort, or a UsbMidi sender
+    private UsbMidi usbFrom, usbTo;          // direct-USB mode only (see directUsb())
+    private final UsbManager usb;
+    private String askedPermissionFor;       // device we're waiting on the Allow dialog for
     private String connectedFrom, connectedTo;
     private String error;
 
@@ -105,6 +113,13 @@ public final class Bridge {
         midi = ctx.getSystemService(MidiManager.class);
         prefs = ctx.getSharedPreferences("bridge", Context.MODE_PRIVATE);
         on = prefs.getBoolean("on", false);
+        usb = ctx.getSystemService(UsbManager.class);
+        if (directUsb()) {
+            IntentFilter f = new IntentFilter(ACTION_USB_PERMISSION);
+            f.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
+            f.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
+            registerUsbEvents(f);
+        }
         if (midi != null) {
             midi.registerDeviceCallback(deviceCallback, ui);
             refreshLists();
@@ -240,7 +255,7 @@ public final class Bridge {
      * the TO device. Dropped while the bridge isn't connected.
      */
     public void sendFromApp(byte[] msg, int offset, int count) throws IOException {
-        MidiInputPort out = toPort;
+        MidiReceiver out = toPort;
         if (out == null) return;
         out.send(msg, offset, count);
         appTracker.feed(msg, offset, count);
@@ -344,7 +359,7 @@ public final class Bridge {
 
     /** Sustain off + all notes off on every channel, so nothing's left hanging. */
     public void allNotesOff() {
-        MidiInputPort out = toPort;
+        MidiReceiver out = toPort;
         if (out == null) return;
         byte[] b = new byte[6];
         try {
@@ -371,7 +386,7 @@ public final class Bridge {
 
         @Override
         public void onSend(byte[] msg, int offset, int count, long timestamp) throws IOException {
-            MidiInputPort out = toPort;
+            MidiReceiver out = toPort;
             if (out == null) return;
             // Drop real-time bytes (clock, active sensing, etc.) — they can
             // appear anywhere in the stream and the FM-1 has no use for them.
@@ -531,6 +546,7 @@ public final class Bridge {
             return;
         }
         connecting = true;
+        if (directUsb() && connectUsb(from, to)) return;
         midi.openDevice(from.info, fDev -> {
             if (fDev == null) {
                 failConnect("Couldn't open " + from.label);
@@ -560,15 +576,19 @@ public final class Bridge {
      */
     private Handler portOpener;
 
-    private void finishConnect(PortRef from, PortRef to, MidiDevice tDev) {
-        toDev = tDev;
-        MidiDevice fDev = fromDev;
+    private Handler portOpener() {
         if (portOpener == null) {
             android.os.HandlerThread t = new android.os.HandlerThread("MidiBridge-ports");
             t.start();
             portOpener = new Handler(t.getLooper());
         }
-        portOpener.post(() -> {
+        return portOpener;
+    }
+
+    private void finishConnect(PortRef from, PortRef to, MidiDevice tDev) {
+        toDev = tDev;
+        MidiDevice fDev = fromDev;
+        portOpener().post(() -> {
             MidiInputPort in = tDev.openInputPort(to.port);
             MidiOutputPort out = fDev.openOutputPort(from.port);
             ui.post(() -> portsOpened(from, to, fDev, in, out));
@@ -587,8 +607,8 @@ public final class Bridge {
         fromPort = out;
         toPort = in;
         connecting = false;
-        if (toPort == null || fromPort == null) {
-            String busy = toPort == null ? to.label : from.label;
+        if (in == null || out == null) {
+            String busy = in == null ? to.label : from.label;
             disconnect(false);
             error = "Couldn't open " + busy + " (another app may be using it).";
             changed();
@@ -596,10 +616,114 @@ public final class Bridge {
         }
         connectedFrom = from.label;
         connectedTo = to.label;
-        fromPort.connect(new Forwarder());
+        out.connect(new Forwarder());
         if (!on) disconnect(true);  // switched off while we were opening
         changed();
     }
+
+    // ------------------------------------------------------------------
+    // Direct USB (Fire TV)
+    // ------------------------------------------------------------------
+
+    private static final String ACTION_USB_PERMISSION = "com.fm1.midibridge.USB_PERMISSION";
+
+    /**
+     * Fire OS (Android 7.1) only: drive USB MIDI devices straight over USB (see
+     * UsbMidi), because its MIDI service jams after a restart with both devices
+     * plugged in. The phone/tablet builds need Android 10+, so never get here.
+     */
+    private boolean directUsb() {
+        return Build.VERSION.SDK_INT < 29 && usb != null;
+    }
+
+    /** directUsb() is Android 7.x only, long before receivers took export flags (Android 13). */
+    @android.annotation.SuppressLint("UnspecifiedRegisterReceiverFlag")
+    private void registerUsbEvents(IntentFilter f) {
+        ctx.registerReceiver(usbEvents, f, null, ui);
+    }
+
+    private static UsbDevice usbDevice(MidiDeviceInfo info) {
+        return info.getProperties().getParcelable(MidiDeviceInfo.PROPERTY_USB_DEVICE);
+    }
+
+    /** Connects over USB if both ends are USB devices. False = not both USB: use the MIDI service. */
+    private boolean connectUsb(PortRef from, PortRef to) {
+        UsbDevice fd = usbDevice(from.info), td = usbDevice(to.info);
+        if (fd == null || td == null) return false;
+        for (UsbDevice d : new UsbDevice[]{fd, td}) {
+            if (usb.hasPermission(d)) continue;
+            connecting = false;
+            error = "On the TV, allow MIDI Bridge to use " + d.getProductName()
+                    + ". Choose \"Allow Always\" so it isn't asked again after a restart.";
+            if (!d.getDeviceName().equals(askedPermissionFor)) {  // one dialog at a time
+                askedPermissionFor = d.getDeviceName();
+                // Mutable: Android adds the device and the answer to it.
+                usb.requestPermission(d, PendingIntent.getBroadcast(ctx, 0,
+                        new Intent(ACTION_USB_PERMISSION).setPackage(ctx.getPackageName()),
+                        Build.VERSION.SDK_INT >= 31 ? PendingIntent.FLAG_MUTABLE : 0));
+            }
+            changed();
+            return true;
+        }
+        portOpener().post(() -> {
+            UsbMidi f = null, t = null;
+            String err = null;
+            try {
+                f = UsbMidi.open(usb, fd);
+                t = UsbMidi.open(usb, td);
+            } catch (IOException e) {
+                err = e.getMessage();
+                closeQuietly(f);
+                f = null;
+            }
+            UsbMidi ff = f, tt = t;
+            String ee = err;
+            ui.post(() -> usbOpened(from, to, ff, tt, ee));
+        });
+        return true;
+    }
+
+    private void usbOpened(PortRef from, PortRef to, UsbMidi f, UsbMidi t, String err) {
+        connecting = false;
+        if (err == null && on) {
+            try {
+                f.startReading(from.port, new Forwarder());
+            } catch (IOException e) {
+                err = e.getMessage();
+            }
+        }
+        if (err != null || !on) {
+            closeQuietly(f);
+            closeQuietly(t);
+            error = err;
+            changed();
+            return;
+        }
+        usbFrom = f;
+        usbTo = t;
+        fromPort = f;
+        toPort = t.sender(to.port);
+        connectedFrom = from.label;
+        connectedTo = to.label;
+        error = null;
+        changed();
+    }
+
+    private final BroadcastReceiver usbEvents = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context c, Intent i) {
+            if (ACTION_USB_PERMISSION.equals(i.getAction())) {
+                askedPermissionFor = null;
+            } else if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(i.getAction())) {
+                UsbDevice d = i.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+                // A MIDI device went away while bridging over USB: drop the link, reconnect if both are still here.
+                if (usbFrom != null && d != null && UsbMidi.midiInterface(d) != null) disconnect(false);
+            }
+            if (midi != null) refreshLists();
+            tryConnect();
+            changed();
+        }
+    };
 
     private void failConnect(String why) {
         connecting = false;
@@ -611,10 +735,13 @@ public final class Bridge {
     private void disconnect(boolean releaseNotes) {
         if (releaseNotes) allNotesOff();
         clearSounding();
-        MidiInputPort in = toPort;
+        MidiReceiver in = toPort;
         toPort = null;
         closeQuietly(fromPort);
-        closeQuietly(in);
+        if (in instanceof java.io.Closeable) closeQuietly((java.io.Closeable) in);
+        closeQuietly(usbTo);
+        usbFrom = null;
+        usbTo = null;
         if (toDev != null && toDev != fromDev) closeQuietly(toDev);
         closeQuietly(fromDev);
         fromPort = null;

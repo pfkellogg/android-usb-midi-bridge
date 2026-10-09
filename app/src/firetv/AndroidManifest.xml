@@ -7,6 +7,8 @@
     <uses-feature android:name="android.hardware.faketouch" android:required="false" />
     <uses-feature android:name="android.software.leanback" android:required="false" />
 
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
     <application android:banner="@drawable/tv_banner">
         <activity android:name=".MainActivity" android:exported="true">
             <!-- Puts MIDI Bridge in the Fire TV "Your Apps & Channels" list. -->
@@ -15,5 +17,12 @@
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Carry on bridging after a restart (if it was ON). -->
+        <receiver android:name=".BootReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>
