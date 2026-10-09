@@ -189,4 +189,4 @@ Release builds don't include it.
   (2026-10-09) although the notes reached the FM-1. With the real keyboard the
   note popup works (seen: B3, 246.9 Hz).
 - Chords haven't been checked with real keys on the stick yet.
-- The 4th Fire TV (.100) still has the older `com.fm1.midibridge` build.
+- Installed on both sticks (4th Fire TV .100, 5th .104); only .104 has been tested with the keyboard and FM-1.
