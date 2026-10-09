@@ -58,13 +58,22 @@ unchanged on Android 10+:
 
 ## Icon
 
-A Golden Gate badge (`app/src/main/res/drawable/ic_launcher*.xml`): orange
-towers and cables over the bay, with a piano-keyboard roadway, in a cyan ring.
-Plain vector on Android 7.1, adaptive icon on 8+.
+A Golden Gate badge: orange towers and cables over the bay, with a
+piano-keyboard roadway, in a cyan ring.
 
-Fire OS limits for sideloaded apps (seen with Zorro too): the home-screen
-banner usually isn't shown, and the "Your Apps & Channels" grid may draw the
-icon in a single colour. Settings → Applications shows it in full colour.
+- Fire TV (Android 7.1) uses the **PNG** icons in `app/src/main/res/mipmap-*/`
+  and the PNG banner `app/src/firetv/res/drawable-xhdpi/tv_banner.png`. Its
+  launcher shows a grey placeholder for a vector (XML) icon, and stretches an
+  icon with transparent corners to fill the tile, so the PNGs are opaque
+  squares (badge on navy), like Zorro's.
+- Android 8+ uses the adaptive icon `mipmap-anydpi-v26/ic_launcher.xml`
+  (vector foreground `drawable/ic_launcher_foreground.xml`).
+- Fire OS caches launcher icons per app version: after changing the icon,
+  bump the firetv `versionCode` (`app/build.gradle`), or it keeps showing the
+  old one, even across an uninstall.
+- Fire OS limits for sideloaded apps (seen with Zorro too): the home-screen
+  banner usually isn't shown, and the "Your Apps & Channels" grid may draw the
+  icon in a single colour.
 
 ## Chords
 

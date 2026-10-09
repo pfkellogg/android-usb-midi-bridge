@@ -27,6 +27,7 @@ android {
         firetv {
             dimension "dist"
             minSdk 25
+            versionCode 24  // bumped so Fire OS drops its cached launcher icon
             versionNameSuffix "-firetv"
             manifestPlaceholders = [appLabel: "MIDI Bridge For Firestick"]
         }
