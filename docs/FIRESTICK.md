@@ -7,9 +7,9 @@ the Fire TV as **MIDI Bridge For Firestick**, with its own app ID
 
 ```
 M-Audio Keystation 49 MK3 ──USB──┐
-                                 ├── powered micro-USB OTG hub ── Fire TV Stick
-M-VAVE FM-1 ───────────────USB───┘                 │
-                                               wall power
+                                 ├── USB hub ── powered OTG adapter ── Fire TV Stick
+M-VAVE FM-1 ───────────────USB───┘              │      (micro-USB)
+                                           wall power
 ```
 
 Tested on two Fire TV Stick 4K (1st gen, `AFTMM`, Fire OS 6.7.1.1 = Android
@@ -19,17 +19,23 @@ Technology USB Composite Device") through the hub.
 
 ## Hardware
 
-The stick has one micro-USB port, and it's also the stick's power input.
-Two hubs have worked on the 4th Fire TV (.100), 2026-10-09:
+The stick has one micro-USB port, and it's also the stick's power input. A
+**powered micro-USB OTG adapter** solves both: its micro-USB plug goes into
+the stick, it takes the stick's power adapter, and it gives a USB-A port for
+the hub. The one used here is a "3 Pack OTG Cable Adapter for Fire TV Stick
+4K Max/4K Select/4K Plus/Cube" ([Amazon](https://www.amazon.com/dp/B0BC9Q7ZQK)).
 
-- a **powered micro-USB OTG hub**, which powers the stick and the hub from one
-  adapter (the setup drawn above; also used on .104), and
+Into the adapter's USB-A port, either hub has worked (4th Fire TV, .100,
+2026-10-09):
+
+- a USB hub (also used on .104), or
 - the **1-to-3 USB "Y" hub cable** from the main README
   ([Amazon](https://www.amazon.com/dp/B0GH45DKS7)), with the keyboard and the
   FM-1 on two of its sockets.
 
-Either way the stick needs power while it hosts the keyboard and the FM-1;
-if it reboots or the devices drop out, use the powered hub.
+The stick, the keyboard and the FM-1 all run off the stick's power adapter
+through the OTG adapter. If the stick reboots or the devices drop out, use a
+hub with its own power supply.
 
 ## Build and install
 
