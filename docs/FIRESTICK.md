@@ -17,6 +17,15 @@ Tested on two Fire TV Stick 4K (1st gen, `AFTMM`, Fire OS 6.7.1.1 = Android
 Android MIDI support, and see both the Keystation and the FM-1 ("Jieli
 Technology USB Composite Device") through the hub.
 
+## Why an app
+
+The Keystation 49 MK3 has **no 5-pin DIN MIDI OUT**, only USB. A keyboard with
+a DIN MIDI OUT (like the Arturia MiniLab) plays the FM-1 with just a MIDI
+cable. Over USB, though, the keyboard and the FM-1 are both USB *devices*, and
+two devices can't talk without a USB *host* between them. The Fire TV Stick is
+that host, and this app reads the keys and sends them on to the FM-1. More in
+the main README, "Why an app?".
+
 ## Hardware
 
 The stick has one micro-USB port, and it's also the stick's power input. A
