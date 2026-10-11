@@ -37,16 +37,35 @@ import java.util.Locale;
  */
 public final class Bridge {
 
-    /** One port on one device: a "from" (device output) or a "to" (device input). */
+    /**
+     * One port on one device: a "from" (device output) or a "to" (device input).
+     * Listed by Android's MIDI service (`info`), or, on a device without one (an
+     * Onn Google TV), found over USB (`usb` only, `info` null).
+     */
     public static final class PortRef {
         final MidiDeviceInfo info;
+        final UsbDevice usb;
         final int port;
         final String label;
 
         PortRef(MidiDeviceInfo info, int port, String label) {
             this.info = info;
+            this.usb = usbDevice(info);
             this.port = port;
             this.label = label;
+        }
+
+        PortRef(UsbDevice usb, int port, String label) {
+            this.info = null;
+            this.usb = usb;
+            this.port = port;
+            this.label = label;
+        }
+
+        /** True when both ports are on the same physical device. */
+        boolean sameDevice(PortRef o) {
+            if (info != null && o.info != null) return info.getId() == o.info.getId();
+            return usb != null && o.usb != null && usb.getDeviceName().equals(o.usb.getDeviceName());
         }
 
         @Override
@@ -122,6 +141,8 @@ public final class Bridge {
         }
         if (midi != null) {
             midi.registerDeviceCallback(deviceCallback, ui);
+        }
+        if (midi != null || directUsb()) {
             refreshLists();
             tryConnect();  // e.g. Android restarted BridgeService after killing the app
         }
@@ -132,7 +153,7 @@ public final class Bridge {
     // ------------------------------------------------------------------
 
     public boolean hasMidi() {
-        return midi != null;
+        return midi != null || directUsb();
     }
 
     public boolean isOn() {
@@ -164,7 +185,7 @@ public final class Bridge {
         PortRef from = from();
         if (from == null) return dests;
         List<PortRef> out = new ArrayList<>();
-        for (PortRef r : dests) if (r.info.getId() != from.info.getId()) out.add(r);
+        for (PortRef r : dests) if (!r.sameDevice(from)) out.add(r);
         return out;
     }
 
@@ -201,7 +222,7 @@ public final class Bridge {
     }
 
     public String status() {
-        if (midi == null) return "This device has no MIDI support.";
+        if (!hasMidi()) return "This device has no MIDI support.";
         if (fromIsSilent()) return SILENT_FROM;
         if (toPort != null && fromPort != null) return "Forwarding\n" + connectedFrom + "\n→ " + connectedTo;
         if (error != null) return error;
@@ -498,6 +519,10 @@ public final class Bridge {
     private void refreshLists() {
         sources.clear();
         dests.clear();
+        if (midi == null) {
+            refreshUsbLists();
+            return;
+        }
         for (MidiDeviceInfo info : midi.getDevices()) {
             if (isOwnDevice(info)) continue;   // our own "MIDI Bridge" input for other apps
             int outs = info.getOutputPortCount();
@@ -516,16 +541,16 @@ public final class Bridge {
         if (saved != null) {
             // Never reuse a saved TO that's on the FROM device (e.g. the keyboard's own input port).
             for (PortRef r : list)
-                if (r.label.equals(saved) && (avoid == null || r.info.getId() != avoid.info.getId())) return r;
+                if (r.label.equals(saved) && (avoid == null || !r.sameDevice(avoid))) return r;
         }
         for (String h : hints) {
             for (PortRef r : list) {
-                if (avoid != null && r.info.getId() == avoid.info.getId()) continue;
+                if (avoid != null && r.sameDevice(avoid)) continue;
                 if (r.label.toLowerCase(Locale.US).contains(h)) return r;
             }
         }
         for (PortRef r : list) {
-            if (avoid == null || r.info.getId() != avoid.info.getId()) return r;
+            if (avoid == null || !r.sameDevice(avoid)) return r;
         }
         return null;
     }
@@ -535,13 +560,13 @@ public final class Bridge {
     // ------------------------------------------------------------------
 
     private void tryConnect() {
-        if (!on || connecting || fromPort != null || midi == null) return;
+        if (!on || connecting || fromPort != null || !hasMidi()) return;
         PortRef from = from();
         PortRef to = to();
         error = null;
         if (from == null || to == null) return;
         if (fromIsSilent()) return;
-        if (from.info.getId() == to.info.getId()) {
+        if (from.sameDevice(to)) {
             error = "Pick different devices for From and To.";
             return;
         }
@@ -628,27 +653,47 @@ public final class Bridge {
     private static final String ACTION_USB_PERMISSION = "com.fm1.midibridge.USB_PERMISSION";
 
     /**
-     * Fire OS (Android 7.1) only: drive USB MIDI devices straight over USB (see
-     * UsbMidi), because its MIDI service jams after a restart with both devices
-     * plugged in. The phone/tablet builds need Android 10+, so never get here.
+     * Drive USB MIDI devices straight over USB (see UsbMidi) instead of through
+     * Android's MIDI service:
+     * - Fire OS (Android 7.1): its MIDI service jams after a restart with both
+     *   devices plugged in. (The phone/tablet builds need Android 10+.)
+     * - Devices with no MIDI service at all, like the Onn Full HD Google TV
+     *   stick (Android 14): the devices are found over USB too (refreshUsbLists).
      */
     private boolean directUsb() {
-        return Build.VERSION.SDK_INT < 29 && usb != null;
+        return usb != null && (Build.VERSION.SDK_INT < 29 || midi == null);
     }
 
-    /** directUsb() is Android 7.x only, long before receivers took export flags (Android 13). */
-    @android.annotation.SuppressLint("UnspecifiedRegisterReceiverFlag")
+    @android.annotation.SuppressLint("UnspecifiedRegisterReceiverFlag")  // flags only exist from Android 13
     private void registerUsbEvents(IntentFilter f) {
-        ctx.registerReceiver(usbEvents, f, null, ui);
+        // Exported: the USB permission answer comes back through our PendingIntent from the system.
+        if (Build.VERSION.SDK_INT >= 33) ctx.registerReceiver(usbEvents, f, null, ui, Context.RECEIVER_EXPORTED);
+        else ctx.registerReceiver(usbEvents, f, null, ui);
     }
 
     private static UsbDevice usbDevice(MidiDeviceInfo info) {
         return info.getProperties().getParcelable(MidiDeviceInfo.PROPERTY_USB_DEVICE);
     }
 
+    /**
+     * No MIDI service: list the USB MIDI devices plugged in, one port each (the
+     * device's first, "cable 0", which is the keyboard's main port). Named like
+     * Android's MIDI service names them, "<manufacturer> <product>", so the FROM /
+     * TO hints and saved choices still match.
+     */
+    private void refreshUsbLists() {
+        for (UsbDevice d : usb.getDeviceList().values()) {
+            if (UsbMidi.midiInterface(d) == null) continue;
+            String name = ((d.getManufacturerName() != null ? d.getManufacturerName() + " " : "")
+                    + (d.getProductName() != null ? d.getProductName() : "USB MIDI device")).trim();
+            if (UsbMidi.hasInput(d)) sources.add(new PortRef(d, 0, name));
+            if (UsbMidi.hasOutput(d)) dests.add(new PortRef(d, 0, name));
+        }
+    }
+
     /** Connects over USB if both ends are USB devices. False = not both USB: use the MIDI service. */
     private boolean connectUsb(PortRef from, PortRef to) {
-        UsbDevice fd = usbDevice(from.info), td = usbDevice(to.info);
+        UsbDevice fd = from.usb, td = to.usb;
         if (fd == null || td == null) return false;
         for (UsbDevice d : new UsbDevice[]{fd, td}) {
             if (usb.hasPermission(d)) continue;
@@ -719,7 +764,7 @@ public final class Bridge {
                 // A MIDI device went away while bridging over USB: drop the link, reconnect if both are still here.
                 if (usbFrom != null && d != null && UsbMidi.midiInterface(d) != null) disconnect(false);
             }
-            if (midi != null) refreshLists();
+            refreshLists();
             tryConnect();
             changed();
         }

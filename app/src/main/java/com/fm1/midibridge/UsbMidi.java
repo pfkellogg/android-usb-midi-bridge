@@ -45,6 +45,23 @@ final class UsbMidi implements Closeable {
         return null;
     }
 
+    /** The device sends MIDI (its MIDI interface has an IN endpoint): a possible FROM. */
+    static boolean hasInput(UsbDevice d) {
+        return endpoint(d, UsbConstants.USB_DIR_IN);
+    }
+
+    /** The device takes MIDI (its MIDI interface has an OUT endpoint): a possible TO. */
+    static boolean hasOutput(UsbDevice d) {
+        return endpoint(d, UsbConstants.USB_DIR_OUT);
+    }
+
+    private static boolean endpoint(UsbDevice d, int dir) {
+        UsbInterface f = midiInterface(d);
+        if (f == null) return false;
+        for (int i = 0; i < f.getEndpointCount(); i++) if (f.getEndpoint(i).getDirection() == dir) return true;
+        return false;
+    }
+
     /** Opens and claims the device's MIDI interface (taking it from the kernel driver). Blocking: call off the main thread. */
     static UsbMidi open(UsbManager um, UsbDevice d) throws IOException {
         UsbInterface f = midiInterface(d);

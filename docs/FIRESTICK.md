@@ -148,6 +148,41 @@ never touches ALSA or the MIDI service's ports:
 
 The phone/tablet builds (Android 10+) keep using Android's MIDI service.
 
+### No MIDI service: direct USB for everything
+
+Some Android TV devices have USB host but **no MIDI service at all** (`dumpsys
+midi` says "Can't find service: midi"). There, `Bridge.directUsb()` is on too,
+and the devices are also *listed* over USB (`Bridge.refreshUsbLists()`): every
+USB MIDI device plugged in, one port each (cable 0), named "manufacturer +
+product" like the MIDI service names them, so the FROM / TO hints and saved
+choices still match.
+
+## Onn Google TV: doesn't work (USB controller dies)
+
+The firetv build installs and runs on the **onn. Full HD Streaming Device**
+(Google TV, Android 14, `onn_2k_gtv`), which is why the no-MIDI-service mode
+above exists. But it can't bridge there: **the Onn's USB host controller
+crashes** and takes every USB device with it. Tested 2026-10-11 with the
+Keystation on a generic USB 2.1 hub (Realtek `0bda:5411`) that also powers the
+Onn:
+
+- **Hub plugged in at boot:** the kernel finds the hub and the Keystation (and
+  the FM-1, if it's plugged in), then about 30 seconds later, when Android first
+  reads the device, the controller is gone: `xhci-hcd-meson: xHCI host
+  controller not responding, assume dead … HC died`. Everything disconnects
+  and USB stays dead until a reboot. Same with the keyboard alone, five boots
+  in a row, so it isn't the FM-1. MIDI Bridge hasn't even started yet.
+- **Hub plugged in after boot:** the Onn never sees it (nothing in the kernel
+  log). The Onn has no battery and one USB-C port, so unplugging the hub's
+  cable entirely cuts its power and reboots it.
+
+Nothing on the app side can get past this: the Onn exposes no USB port to
+Android (`dumpsys usb set-port-roles` → "No such USB port"), and turning off
+USB power saving or re-authorizing the bus (`/sys/bus/usb/devices/usb1/power/control`,
+`…/authorized`) is "Permission denied" even for adb, let alone an app. A
+different power-passthrough OTG hub might behave differently; otherwise use a
+Fire TV Stick.
+
 ## Icon
 
 The Golden Gate's two towers and main cable over a piano-keyboard roadway, on a
