@@ -51,6 +51,14 @@ The stick, the keyboard and the FM-1 all run off the stick's power adapter
 through the OTG adapter. If the stick reboots or the devices drop out, use a
 hub with its own power supply.
 
+**Noise ("motorboating") from the FM-1's audio out** when it's also on the
+stick's USB and its output goes through a mixer to a stereo: that's a ground
+loop (the FM-1 is grounded both through USB and through the audio cable).
+A 3.5 mm ground loop isolator between the FM-1's output and the mixer
+usually stops it; plugging the stick's power and the mixer / stereo into the
+same power strip can help too. Unplugging the FM-1's USB cable for a moment
+confirms it (the noise stops).
+
 ## Build and install
 
 ```sh
@@ -248,8 +256,16 @@ Grant it once with adb (v1.24, 2026-10-19):
 adb shell appops set com.fm1.midibridge.firetv SYSTEM_ALERT_WINDOW allow
 ```
 
-then open MIDI Bridge once (or restart the stick) so the bridge picks it up.
+then open MIDI Bridge once so the bridge picks it up.
 `… SYSTEM_ALERT_WINDOW deny` turns the badge off again.
+
+**After every restart of the stick, open MIDI Bridge once** (then Back).
+Fire OS only shows an overlay window that was added while its app was in
+front; one added from the background (the bridge starting by itself at
+boot, or when a note comes) stays invisible however it's set. So the window
+is added when MIDI Bridge's screen comes up (`MainActivity.onResume` ->
+`NoteOverlay.attachFromForeground()`), stays added, and the box only fades
+in and out.
 
 ### Moving and resizing the box
 
@@ -301,10 +317,14 @@ Release builds don't include it.
 
 ## Known issues
 
-- **Screenshots (`adb exec-out screencap`) of a stick whose TV is off** keep
-  returning the last frame shown, so the popup seems not to open during
-  TestPlayer runs. It does (checked with logging, 2026-10-19); test with the
-  TV on.
-- Chords haven't been checked with real keys on the stick yet.
+- **The box over other apps doesn't show in screenshots** (`adb exec-out
+  screencap`) while Silk plays a video, and Fire OS hides it while the stick
+  is idle (screensaver / home-screen ambient mode). Look at the TV instead.
+- **TestPlayer notes don't open MIDI Bridge's own popup** (real keys do); the
+  box over other apps does show them. Chords were checked that way over a
+  Udemy lesson: the "Imagine" progression (C, Cmaj7, F/C, Am, Dm, F, G, E7)
+  all named right (2026-10-19).
+- Every install or restart asks again to allow USB access for the keyboard
+  and the FM-1: choose **Allow Always**.
 - Installed and tested with the keyboard and FM-1 on both sticks (4th Fire
-  TV .100, 5th .104).
+  TV, 5th Fire TV).
