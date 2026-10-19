@@ -16,6 +16,7 @@ import android.os.PowerManager;
 import android.provider.Settings;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.KeyEvent;
 import android.view.View;
 import android.app.AlertDialog;
 import android.widget.ArrayAdapter;
@@ -46,12 +47,18 @@ public class MainActivity extends Activity {
     private FrameLayout notePopup;
     private LinearLayout notePanel;
     private TextView popName, popOctave, popHz, popNotes;
+    private StaffView popStaff;
     private LinearLayout popRow;
     // Chord on show in the NOTE card ("C major\nC4  E4  G4"), or null for the single note.
     private String chordText;
     private boolean popupShown;
     private long lastNoteAt;
     private final Runnable onChange = this::refresh;
+    // This screen is in front: NoteOverlay keeps out of the way of our own popup.
+    // Resumed/paused, not started/stopped: after Back, onStop can come seconds
+    // late on Fire OS (it waits for the next app to go idle), and the box over
+    // that app stayed hidden until then.
+    static volatile boolean inFront;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -74,6 +81,19 @@ public class MainActivity extends Activity {
         bridge.addListener(onChange);
         refresh();
         ui.post(ticker);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        inFront = true;
+        if (NoteOverlay.current != null) NoteOverlay.current.attachFromForeground();
+    }
+
+    @Override
+    protected void onPause() {
+        inFront = false;
+        super.onPause();
     }
 
     @Override
@@ -256,6 +276,23 @@ public class MainActivity extends Activity {
         root.addView(panic);
         updatePanic();
 
+        // The badge over other apps (Fire TV build): put it where the lesson isn't.
+        if (NoteOverlay.allowed(this)) {
+            Button place = new Button(this);
+            place.setText("Move / resize the note box over other apps");
+            place.setAllCaps(false);
+            place.setTextSize(17);
+            place.setTextColor(TEXT);
+            place.setStateListAnimator(null);
+            place.setBackground(rounded(CARD, BORDER, 14));
+            LinearLayout.LayoutParams mlp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, dp(56));
+            mlp.topMargin = dp(12);
+            place.setLayoutParams(mlp);
+            place.setOnClickListener(v -> adjustOverlay());
+            root.addView(place);
+        }
+
         if (proSing() != null) {
             Button sing = new Button(this);
             sing.setText("🎤  Sing on key   PRO");
@@ -328,7 +365,15 @@ public class MainActivity extends Activity {
         popName.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
         popName.setGravity(Gravity.CENTER);
         popName.setIncludeFontPadding(false);
-        notePanel.addView(popName);
+        // The name, with the note(s) written on a grand staff beside it.
+        LinearLayout top = new LinearLayout(this);
+        top.setOrientation(LinearLayout.HORIZONTAL);
+        top.setGravity(Gravity.CENTER_VERTICAL);
+        notePanel.addView(top, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        top.addView(popName, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+        popStaff = new StaffView(this);
+        top.addView(popStaff, new LinearLayout.LayoutParams(dp(190), dp(180)));
 
         // Chords only: the held keys under the chord name, e.g. "C4   E4   G4".
         popNotes = new TextView(this);
@@ -365,6 +410,61 @@ public class MainActivity extends Activity {
         notePanel.addView(teaser, tlp);
         teaser.setOnClickListener(v -> openSing(bridge.lastNoteNum()));
         notePanel.setClickable(true);  // taps on the panel itself don't close it; outside does
+    }
+
+    /**
+     * Places the badge that shows notes over other apps: the remote's arrows
+     * move it, rewind / fast-forward make it smaller / bigger, OK or Back is
+     * done. On a touch screen: drag it, and use the buttons.
+     */
+    private void adjustOverlay() {
+        NoteOverlay o = NoteOverlay.current;
+        if (o == null) {
+            new AlertDialog.Builder(this).setTitle("Turn the bridge ON first")
+                    .setMessage("The note box shows while the bridge is on.")
+                    .setPositiveButton("OK", null).show();
+            return;
+        }
+        o.setAdjusting(true);
+        int step = dp(24);
+        AlertDialog d = new AlertDialog.Builder(this)
+                .setTitle("Move / resize the note box")
+                .setMessage("◀ ▲ ▶ ▼  arrows: move it\n"
+                        + "⏪  rewind: smaller     ⏩  fast-forward: bigger\n"
+                        + "OK or Back: done\n\n"
+                        + "Touch screen: drag the box, and use the buttons.")
+                .setNegativeButton("Smaller", null)
+                .setNeutralButton("Bigger", null)
+                .setPositiveButton("Done", null)
+                .create();
+        d.setOnKeyListener((di, code, e) -> {
+            if (e.getAction() != KeyEvent.ACTION_DOWN) return false;
+            switch (code) {
+                case KeyEvent.KEYCODE_DPAD_LEFT: o.moveBy(-step, 0); return true;
+                case KeyEvent.KEYCODE_DPAD_RIGHT: o.moveBy(step, 0); return true;
+                case KeyEvent.KEYCODE_DPAD_UP: o.moveBy(0, -step); return true;
+                case KeyEvent.KEYCODE_DPAD_DOWN: o.moveBy(0, step); return true;
+                case KeyEvent.KEYCODE_MEDIA_REWIND: o.scaleBy(-0.1f); return true;
+                case KeyEvent.KEYCODE_MEDIA_FAST_FORWARD: o.scaleBy(0.1f); return true;
+                case KeyEvent.KEYCODE_DPAD_CENTER:
+                case KeyEvent.KEYCODE_ENTER:
+                    di.dismiss();
+                    return true;
+                default: return false;
+            }
+        });
+        d.setOnDismissListener(di -> o.setAdjusting(false));
+        d.show();
+        // Bottom-left, out of the way of the box (which starts top-right), and no dimming.
+        // Set after show(): Fire OS's dialog theme put it back in the middle otherwise.
+        android.view.WindowManager.LayoutParams wl = d.getWindow().getAttributes();
+        wl.gravity = Gravity.BOTTOM | Gravity.START;
+        wl.width = Math.min(getResources().getDisplayMetrics().widthPixels / 2, dp(520));
+        wl.dimAmount = 0f;
+        d.getWindow().setAttributes(wl);
+        // Smaller / Bigger keep the dialog open.
+        d.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener(v -> o.scaleBy(-0.1f));
+        d.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v -> o.scaleBy(0.1f));
     }
 
     /** The Pro singing screen, or null in the free build (its code isn't in this repo). */
@@ -435,6 +535,7 @@ public class MainActivity extends Activity {
     private void showNote(int note) {
         popName.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 150);
         popName.setText(Bridge.pitchClass(note));
+        popStaff.setNotes(note);
         popNotes.setVisibility(View.GONE);
         popRow.setVisibility(View.VISIBLE);
         popOctave.setText(String.valueOf(note / 12 - 1));
@@ -447,6 +548,7 @@ public class MainActivity extends Activity {
         // Shrink long names ("C#m(maj7) / E") so they stay on one line.
         popName.setTextSize(TypedValue.COMPLEX_UNIT_DIP, name.length() <= 4 ? 130 : name.length() <= 8 ? 96 : 64);
         popName.setText(name);
+        popStaff.setNotes(keys);
         popNotes.setText(noteList(keys, "   "));
         popNotes.setVisibility(View.VISIBLE);
         popRow.setVisibility(View.GONE);

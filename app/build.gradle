@@ -10,8 +10,8 @@ android {
         applicationId "com.fm1.midibridge"
         minSdk 29
         targetSdk 34
-        versionCode 22
-        versionName "1.22"
+        versionCode 30
+        versionName "1.30"
         manifestPlaceholders = [appLabel: "MIDI Bridge"]
     }
 
@@ -28,10 +28,10 @@ android {
             dimension "dist"
             minSdk 25
             applicationIdSuffix ".firetv"  // own ID: the Fire TV Appstore never re-makes a sideloaded app's tile picture
-            versionCode 26  // bumped so Fire OS drops its cached launcher icon
+            versionCode 40  // bumped so Fire OS drops its cached launcher icon
             versionNameSuffix "-firetv"
-            versionName "1.23"  // new name too: the Your Apps grid caches icons by it
-            manifestPlaceholders = [appLabel: "MIDI Bridge For Firestick"]
+            versionName "1.37"  // new name too: the Your Apps grid caches icons by it
+            manifestPlaceholders = [appLabel: "AIKellogg MIDI Bridge: Notes, Chords & Staff — for Fire TV Stick 4K (Android Fire OS, not Vega OS)"]
         }
     }
     sourceSets {

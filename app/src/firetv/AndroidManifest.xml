@@ -8,6 +8,8 @@
     <uses-feature android:name="android.software.leanback" android:required="false" />
 
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Note popup over other apps (NoteOverlay), e.g. a Udemy lesson. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <application android:banner="@drawable/tv_banner">
         <activity android:name=".MainActivity" android:exported="true">

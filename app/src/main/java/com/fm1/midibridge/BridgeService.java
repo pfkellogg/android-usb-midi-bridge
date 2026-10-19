@@ -26,6 +26,7 @@ public class BridgeService extends Service {
     private Bridge bridge;
     private PowerManager.WakeLock wakeLock;
     private String shownText;
+    private NoteOverlay overlay;
     private final Runnable onChange = this::updateNotification;
 
     @Override
@@ -40,6 +41,8 @@ public class BridgeService extends Service {
         wakeLock = getSystemService(PowerManager.class).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MidiBridge:forwarding");
         wakeLock.acquire();
         bridge.addListener(onChange);
+        overlay = new NoteOverlay(this);
+        overlay.start();
     }
 
     @Override
@@ -53,12 +56,14 @@ public class BridgeService extends Service {
             stopSelf();
             return START_NOT_STICKY;
         }
+        overlay.start();  // no-op if running; picks up "draw over other apps" granted since
         return START_STICKY;
     }
 
     @Override
     public void onDestroy() {
         bridge.removeListener(onChange);
+        overlay.stop();
         if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
         super.onDestroy();
     }

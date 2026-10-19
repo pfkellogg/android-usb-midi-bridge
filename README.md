@@ -53,7 +53,7 @@ The tablet needs a **USB hub** between it and the two devices — but it can be 
 
 **Tip: use a powered hub for long sessions.** A bus-powered hub (like the Y cable above) makes the tablet's battery power the keyboard *and* the synth as well as itself. A hub with its own power adapter powers the keyboard and the FM-1 from the wall instead, so the tablet only runs itself and the app and its battery lasts far longer — even on tablets that can't charge while using USB. Don't try to wire a charger to the tablet's battery directly: that bypasses its charging circuit and is a fire risk.
 
-**No tablet? Use a Fire TV Stick.** See [MIDI Bridge For Firestick](docs/FIRESTICK.md): the same bridge as a Fire TV app, with a powered micro-USB OTG hub.
+**No tablet? Use a Fire TV Stick.** See [AIKellogg MIDI Bridge: Notes, Chords & Staff — for Fire TV Stick 4K (Android Fire OS, not Vega OS)](docs/FIRESTICK.md): the same bridge as a Fire TV app, with a powered micro-USB OTG hub. Its note popup writes what you play on a grand staff, in a box over other apps (e.g. a Udemy lesson) that you can move and resize.
 
 ## Download
 

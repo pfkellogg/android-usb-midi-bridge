@@ -6,3 +6,4 @@ local.properties
 *.apk
 /screenshot.png
 /pro/
+__pycache__/

@@ -1,9 +1,9 @@
-# MIDI Bridge For Firestick
+# AIKellogg MIDI Bridge: Notes, Chords & Staff — for Fire TV Stick 4K (Android Fire OS, not Vega OS)
 
 The bridge as a Fire TV app: a Fire TV Stick plays the FM-1 from a USB-only
 keyboard, no tablet needed. It's the `firetv` build of this project, shown on
-the Fire TV as **MIDI Bridge For Firestick**, with its own app ID
-`com.fm1.midibridge.firetv` (v1.23-firetv).
+the Fire TV as **AIKellogg MIDI Bridge: Notes, Chords & Staff — for Fire TV Stick 4K (Android Fire OS, not Vega OS)**, with its own app ID
+`com.fm1.midibridge.firetv` (v1.37-firetv).
 
 ```
 M-Audio Keystation 49 MK3 ──USB──┐
@@ -16,6 +16,11 @@ Tested on two Fire TV Stick 4K (1st gen, `AFTMM`, Fire OS 6.7.1.1 = Android
 7.1) sticks, the 4th (.100) and 5th (.104) Fire TVs. They report USB host and
 Android MIDI support, and see both the Keystation and the FM-1 ("Jieli
 Technology USB Composite Device") through the hub.
+
+**Which Fire TV Stick:** the Android-based ones (Fire OS), like the Fire TV
+Stick 4K (1st gen, tested here) and other Android-based models. It does **not** run on Amazon's newer Vega
+OS sticks (e.g. the Fire TV Stick 4K Select), which aren't Android and can't
+install Android apps.
 
 ## Why an app
 
@@ -56,7 +61,7 @@ adb install -r app/build/outputs/apk/firetv/debug/app-firetv-debug.apk
 ```
 
 Open it from **Your Apps & Channels** (may be under "See all") or Settings →
-Applications → Manage Installed Applications → MIDI Bridge For Firestick →
+Applications → Manage Installed Applications → AIKellogg MIDI Bridge: Notes, Chords & Staff — for Fire TV Stick 4K (Android Fire OS, not Vega OS) →
 Launch application.
 
 The FROM / TO devices are picked automatically; check them, then press
@@ -113,7 +118,7 @@ unchanged on Android 10+:
   opening a MIDI port is a blocking call, and on Fire OS a stuck port froze
   the app on a black screen (ANR). Now the screen comes up and shows
   "Connecting…" instead.
-- **Name**: `manifestPlaceholders appLabel` — "MIDI Bridge For Firestick" here,
+- **Name**: `manifestPlaceholders appLabel` — "AIKellogg MIDI Bridge: Notes, Chords & Staff — for Fire TV Stick 4K (Android Fire OS, not Vega OS)" here,
   "MIDI Bridge" elsewhere. The screen title follows the app name.
 
 ## Direct USB
@@ -227,6 +232,59 @@ before.
   rename the chord.
 - 2-note shapes (power chords) are deliberately not named.
 
+## Notes over other apps
+
+With another app in front (e.g. a Udemy piano course in Silk), a small badge
+in the top-right corner shows the note (or chord) you play, written on a
+grand staff too (see "Staff" below), and fades out
+about a second after you stop (`NoteOverlay.java`, run by `BridgeService`).
+It never takes the remote's focus. It stays hidden while MIDI Bridge's own
+screen is open.
+
+It needs "draw over other apps", which Fire OS has no settings screen for.
+Grant it once with adb (v1.24, 2026-10-19):
+
+```sh
+adb shell appops set com.fm1.midibridge.firetv SYSTEM_ALERT_WINDOW allow
+```
+
+then open MIDI Bridge once (or restart the stick) so the bridge picks it up.
+`… SYSTEM_ALERT_WINDOW deny` turns the badge off again.
+
+### Moving and resizing the box
+
+On MIDI Bridge's screen (with the bridge ON), **Move / resize the note box
+over other apps** shows the box with the last note (or A4) and a help box at
+the bottom-left: the remote's **arrows** move it, **rewind / fast-forward**
+make it smaller / bigger (60–200 %), **OK** or **Back** is done. On a touch
+screen, drag the box and use the Smaller / Bigger buttons. Position and size
+are remembered (`shared_prefs/overlay.xml`; `NoteOverlay.moveBy/scaleBy`).
+
+## No waveform
+
+A waveform under the staff was tried (2026-10-19) and taken out: to be right
+it has to show the voice the FM-1 is actually playing, and the app can't know
+that. The FM-1 sends nothing back over USB, not when its knob changes voice
+and not in answer to a DX7 voice request (F0 43 20 00 F7). Its USB audio
+stream can't stand in either: on the Fire TV Stick it arrives broken (about
+0.4 s of sound in 7 s, nearly all zeros). A sine per key, or a voice picked
+by hand in the app, was wrong whenever the knob moved.
+
+## Staff
+
+The note popup (all Android builds) and the badge over other apps write what
+you play on a grand staff too: treble and bass clef, whole notes, ledger
+lines and sharps (`StaffView.java`, from v1.25 / tablet v1.23). Middle C and
+up go on the treble staff, B3 and down on the bass staff. In a chord, a
+second's upper note moves right of the stem line, and sharps that would clash
+step further left. The view shrinks to fit when notes go past two ledger
+lines.
+
+The clefs, sharp and note head are outlines taken from the **Noto Music**
+font (SIL Open Font License), so they look the same on any device whatever
+its fonts. `tools/gen_staff_glyphs.py` makes `StaffGlyphs.java` from the font
+(and the Mac app's `staff_glyphs.py`); the Mac bridge draws the same staff.
+
 ## Testing without the keys (debug builds)
 
 `app/src/debug/.../TestPlayer.java` plays notes down the keyboard's path, so
@@ -243,9 +301,10 @@ Release builds don't include it.
 
 ## Known issues
 
-- **Note/chord display during TestPlayer runs** didn't update in one test
-  (2026-10-09) although the notes reached the FM-1. With the real keyboard the
-  note popup works (seen: B3, 246.9 Hz).
+- **Screenshots (`adb exec-out screencap`) of a stick whose TV is off** keep
+  returning the last frame shown, so the popup seems not to open during
+  TestPlayer runs. It does (checked with logging, 2026-10-19); test with the
+  TV on.
 - Chords haven't been checked with real keys on the stick yet.
 - Installed and tested with the keyboard and FM-1 on both sticks (4th Fire
   TV .100, 5th .104).
