@@ -70,6 +70,12 @@ passage, and save it as a named clip, while MIDI Bridge keeps writing what you
 play on the staff. No ShuttleXpress? Press Play/Pause twice quickly for an
 on-screen one. Both apps run side by side on the same stick.
 
+**A second box on the same TV?** An onn. Google TV stick can't use USB devices
+(its USB-C port only takes power), but it runs apps the Fire TV can't, such as
+KaraFun. Keep the ShuttleXpress on this hub and install Shuttle Looper 1.2 on
+both boxes: the buttons go to whichever box played a video last
+([Two boxes, one ShuttleXpress](https://github.com/pfkellogg/shuttle-looper-simple#two-boxes-one-shuttlexpress)).
+
 ## Build and install
 
 ```sh
