@@ -5,15 +5,17 @@ keyboard, no tablet needed. It's the `firetv` build of this project, shown on
 the Fire TV as **AIKellogg MIDI Bridge: Notes, Chords & Staff — for Fire TV Stick 4K (Android Fire OS, not Vega OS)**, with its own app ID
 `com.fm1.midibridge.firetv` (v1.37-firetv).
 
+▶ **Videos** (AIKellogg channel, Learn Piano series): [Part 1: MIDI Bridge for Fire TV](https://youtu.be/Psc5Abezvuk) · [Part 2: Shuttle Looper](https://youtu.be/ui-dkXiveTU), which loops a section of the lesson using the hub's third port.
+
 ```
 M-Audio Keystation 49 MK3 ──USB──┐
                                  ├── USB hub ── powered OTG adapter ── Fire TV Stick
-M-VAVE FM-1 ───────────────USB───┘              │      (micro-USB)
-                                           wall power
+M-VAVE FM-1 ───────────────USB───┤              │      (micro-USB)
+ShuttleXpress (optional) ──USB───┘          wall power
 ```
 
 Tested on two Fire TV Stick 4K (1st gen, `AFTMM`, Fire OS 6.7.1.1 = Android
-7.1) sticks, the 4th (.100) and 5th (.104) Fire TVs. They report USB host and
+7.1) sticks. They report USB host and
 Android MIDI support, and see both the Keystation and the FM-1 ("Jieli
 Technology USB Composite Device") through the hub.
 
@@ -39,13 +41,12 @@ the stick, it takes the stick's power adapter, and it gives a USB-A port for
 the hub. The one used here is a "3 Pack OTG Cable Adapter for Fire TV Stick
 4K Max/4K Select/4K Plus/Cube" ([Amazon](https://www.amazon.com/dp/B0BC9Q7ZQK)).
 
-Into the adapter's USB-A port, either hub has worked (4th Fire TV, .100,
-2026-10-09):
+Into the adapter's USB-A port, either hub has worked:
 
-- a USB hub (also used on .104), or
+- a USB hub, or
 - the **1-to-3 USB "Y" hub cable** from the main README
   ([Amazon](https://www.amazon.com/dp/B0GH45DKS7)), with the keyboard and the
-  FM-1 on two of its sockets.
+  FM-1 on two of its sockets. The third is free for a ShuttleXpress (below).
 
 The stick, the keyboard and the FM-1 all run off the stick's power adapter
 through the OTG adapter. If the stick reboots or the devices drop out, use a
@@ -58,6 +59,16 @@ A 3.5 mm ground loop isolator between the FM-1's output and the mixer
 usually stops it; plugging the stick's power and the mixer / stereo into the
 same power strip can help too. Unplugging the FM-1's USB cable for a moment
 confirms it (the noise stops).
+
+## The hub's third port: Shuttle Looper
+
+With the keyboard and the FM-1 on two of the hub cable's sockets, the third
+can take a **Contour ShuttleXpress** ([Amazon](https://www.amazon.com/dp/B0032Y0OH0))
+for [**Shuttle Looper**](https://github.com/pfkellogg/shuttle-looper-simple):
+mark IN and OUT on the lesson (Udemy in Silk, YouTube, VLC…), loop the hard
+passage, and save it as a named clip, while MIDI Bridge keeps writing what you
+play on the staff. No ShuttleXpress? Press Play/Pause twice quickly for an
+on-screen one. Both apps run side by side on the same stick.
 
 ## Build and install
 
