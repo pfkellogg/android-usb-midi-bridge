@@ -64,7 +64,7 @@ confirms it (the noise stops).
 
 With the keyboard and the FM-1 on two of the hub cable's sockets, the third
 can take a **Contour ShuttleXpress** ([Amazon](https://www.amazon.com/dp/B0032Y0OH0))
-for [**Shuttle Looper**](https://github.com/pfkellogg/shuttle-looper-simple):
+for **Shuttle Looper** ([video](https://youtu.be/ui-dkXiveTU); in beta testing):
 mark IN and OUT on the lesson (Udemy in Silk, YouTube, VLC…), loop the hard
 passage, and save it as a named clip, while MIDI Bridge keeps writing what you
 play on the staff. No ShuttleXpress? Press Play/Pause twice quickly for an
