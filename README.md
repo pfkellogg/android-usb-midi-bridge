@@ -55,6 +55,8 @@ The tablet needs a **USB hub** between it and the two devices — but it can be 
 
 **No tablet? Use a Fire TV Stick.** See [AIKellogg MIDI Bridge: Notes, Chords & Staff — for Fire TV Stick 4K (Android Fire OS, not Vega OS)](docs/FIRESTICK.md): the same bridge as a Fire TV app, with a powered micro-USB OTG hub. Its note popup writes what you play on a grand staff, in a box over other apps (e.g. a Udemy lesson) that you can move and resize. Watch it: [Part 1: MIDI Bridge for Fire TV](https://youtu.be/Psc5Abezvuk); and to loop a section of the lesson, [Part 2: Shuttle Looper](https://youtu.be/ui-dkXiveTU). **Beta testers wanted** for the Fire TV app and Shuttle Looper: if you want to be considered, leave a comment on either video.
 
+**Playing an M-VAVE FM-1?** Two free apps grew out of this bridge. [Synth Spyglass for Android](https://github.com/pfkellogg/synth-spyglass-android) does everything it does, plus a spyglass over every app with the note or chord, the staff, velocity and the FM-1's real waveform ([video](https://youtu.be/jbxL0yW96QM)). [FM-1 Mirror + Spyglass](https://github.com/pfkellogg/fm1-mirror-spyglass-android) also shows the FM-1's own screen, big, in the same app ([video](https://youtu.be/XDqrabQf5uY)). Use one app at a time: only one can play the FM-1.
+
 ## Download
 
 Get the APK from [**Releases**](../../releases/latest), open it on the tablet, and allow installing from that source when Android asks. (It's a debug-signed sideload build, not a Play Store app, so Play Protect may warn — choose *Install anyway*.)
